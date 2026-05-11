@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت‌نام | پلتفرم اجاره اقامتگاه</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+</head>
+<body>
+
+<div class="register-container">
+
+    <div class="page-header">
+        <h1>پلتفرم اجاره اقامتگاه</h1>
+        <p>با ایجاد حساب کاربری، رزرو اقامتگاه‌ها یا میزبانی از مهمانان ساده‌تر می‌شود.</p>
+    </div>
+
+    <div class="register-card">
+        <div class="register-header">
+            <i class="fas fa-user-plus"></i>
+            <h2>فرم ثبت‌نام</h2>
+        </div>
+
+        <form class="register-form" action="#" method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first-name">نام <span class="required-star">*</span></label>
+                    <input type="text" id="first-name" name="first_name" class="form-control"
+                           placeholder="مثال: علی" required>
+                </div>
+                <div class="form-group">
+                    <label for="last-name">نام خانوادگی <span class="required-star">*</span></label>
+                    <input type="text" id="last-name" name="last_name" class="form-control"
+                           placeholder="مثال: محمدی" required>
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <label for="phone">شماره موبایل <span class="required-star">*</span></label>
+                <input type="tel" id="phone" name="phone" class="form-control"
+                       placeholder="مثلاً: ۰۹۱۲۳۴۵۶۷۸۹" required pattern="[0-9]{10,11}"
+                       title="شماره موبایل باید ۱۰ یا ۱۱ رقم باشد">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">رمز عبور <span class="required-star">*</span></label>
+                    <input type="password" id="password" name="password" class="form-control"
+                           placeholder="حداقل ۸ کاراکتر" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">تکرار رمز عبور <span class="required-star">*</span></label>
+                    <input type="password" id="confirm-password" name="confirm_password" class="form-control"
+                           placeholder="تکرار رمز عبور" required minlength="8">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="account-type">نوع حساب کاربری <span class="required-star">*</span></label>
+                <select id="account-type" name="account_type" class="form-control" required>
+                    <option value="" disabled selected>نقش خود را انتخاب کنید</option>
+                    <option value="guest">مهمان (مسافر)</option>
+                    <option value="host">میزبان (صاحب اقامتگاه)</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                ایجاد حساب کاربری <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="login-link">
+                قبلاً ثبت‌نام کرده‌اید؟ <a href="#">وارد شوید</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="site-footer">
+        © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
+    </div>
+</div>
+
+</body>
+</html>

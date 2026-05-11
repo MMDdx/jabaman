@@ -1,0 +1,405 @@
+/* ===========================
+   style.css - پلتفرم اجاره اقامتگاه
+   شامل استایل صفحات: تماس با ما، ثبت‌نام، درج اقامتگاه
+   =========================== */
+
+/* ----- ریست و پایه ----- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f4f7fc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    direction: rtl;
+    line-height: 1.5;
+    color: #1e2a41;
+}
+
+/* ----- کلاس‌های عمومی ----- */
+.page-header {
+    margin-bottom: 2.5rem;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e2a41;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
+}
+
+.page-header p {
+    font-size: 1.2rem;
+    color: #4a5b6e;
+}
+
+.contact-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+/* ----- کارت‌ها ----- */
+.info-card,
+.form-card,
+.register-card {
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 20px 35px -8px rgba(0, 20, 45, 0.1);
+    padding: 2rem 1.8rem;
+}
+
+/* ----- هدر کارت‌ها ----- */
+.info-header,
+.form-header,
+.register-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.8rem;
+}
+
+.info-header i,
+.form-header i,
+.register-header i {
+    font-size: 2rem;
+    color: #0d6efd;
+    margin-left: 0.8rem;
+}
+
+.info-header h2,
+.form-header h2,
+.register-header h2 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: #1e2a41;
+    margin: 0;
+}
+
+/* ----- آیتم‌های اطلاعات تماس ----- */
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.info-item i {
+    color: #0d6efd;
+    font-size: 1.3rem;
+    margin-left: 1.2rem;
+    min-width: 1.5rem;
+    margin-top: 0.2rem;
+}
+
+.info-item .item-title {
+    font-weight: 600;
+    color: #1e2a41;
+    margin-bottom: 0.2rem;
+}
+
+.info-item .item-detail {
+    color: #4a5b6e;
+    line-height: 1.6;
+}
+
+.info-item a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.social-links {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 0.3rem;
+}
+
+.social-links a {
+    color: #4a5b6e;
+    font-size: 1.3rem;
+    transition: color 0.15s;
+}
+
+.social-links a:hover {
+    color: #0d6efd;
+}
+
+.divider-light {
+    height: 2px;
+    background: linear-gradient(to left, #e2e8f0, transparent);
+    margin: 1.5rem 0;
+}
+
+.info-footer-text {
+    color: #1e2a41;
+    font-weight: 500;
+}
+
+/* ----- فرم‌ها ----- */
+.contact-form,
+.register-form,
+.listing-form {
+    width: 100%;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.form-group {
+    margin-bottom: 1.8rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #1e2a41;
+    font-size: 1rem;
+}
+
+.required-star {
+    color: #dc3545;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    font-size: 1rem;
+    background: #fafcff;
+    box-sizing: border-box;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.form-control:focus {
+    border-color: #0d6efd;
+    background-color: #ffffff;
+}
+
+/* ایمیل در فرم‌ها */
+input[name="email"] {
+    direction: ltr;
+    text-align: right;
+}
+
+/* select سفارشی */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234a5b6e' d='M6 8.825L1.175 4 2.238 2.938 6 6.7 9.763 2.938 10.825 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 1.2rem center;
+    padding-left: 2.8rem;
+    cursor: pointer;
+}
+
+textarea.form-control {
+    resize: vertical;
+}
+
+/* ----- دکمه‌ها ----- */
+.submit-btn {
+    width: 100%;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    padding: 1rem 1.8rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px -6px rgba(13, 110, 253, 0.5);
+    transition: background-color 0.15s, box-shadow 0.15s;
+    border: 1px solid #0d6efd;
+    letter-spacing: 0.3px;
+    margin-top: 0.5rem;
+}
+
+.submit-btn i {
+    margin-right: 8px;
+    font-size: 0.9rem;
+}
+
+.submit-btn:hover {
+    background-color: #0b5ed7;
+    box-shadow: 0 12px 24px -6px rgba(11, 94, 215, 0.7);
+}
+
+/* ----- لینک‌های پایین فرم ----- */
+.form-note {
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: #6c7a8a;
+    text-align: center;
+}
+
+.login-link {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #4a5b6e;
+}
+
+.login-link a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-link a:hover {
+    text-decoration: underline;
+}
+
+/* ----- فوتر ----- */
+.contact-footer,
+.site-footer {
+    margin-top: 2.5rem;
+    border-top: 1px solid #d0dae8;
+    padding-top: 1.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    color: #4a5b6e;
+    font-size: 0.9rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1.8rem;
+}
+
+.footer-links a {
+    color: #4a5b6e;
+    text-decoration: none;
+}
+
+.footer-links a:hover {
+    color: #0d6efd;
+}
+
+.site-footer {
+    justify-content: center;
+    text-align: center;
+}
+
+/* ----- امکانات اقامتگاه (چک‌باکس‌ها) ----- */
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.amenity-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.amenity-item input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: #0d6efd;
+    cursor: pointer;
+}
+
+.amenity-item label {
+    font-weight: 400;
+    color: #1e2a41;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* ----- آپلود فایل ----- */
+.file-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.file-label {
+    background: #f0f4ff;
+    border: 2px dashed #b8c9e0;
+    border-radius: 16px;
+    padding: 0.8rem 1.5rem;
+    font-weight: 500;
+    color: #0d6efd;
+    cursor: pointer;
+    transition: 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.file-label i {
+    font-size: 1.2rem;
+}
+
+.file-label:hover {
+    background: #e5eeff;
+    border-color: #0d6efd;
+}
+
+input[type="file"] {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+/* ----- کانتینرهای اختصاصی صفحات ----- */
+.contact-container {
+    max-width: 1250px;
+    margin: 2.5rem auto;
+    padding: 0 1.5rem;
+}
+
+.register-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.add-listing-container {
+    max-width: 900px;
+    margin: 2.5rem auto;
+    padding: 0 1.5rem;
+}
+
+.info-card {
+    flex: 1 1 300px;
+}
+
+.form-card {
+    flex: 2 1 400px;
+}
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.checkbox-group label {
+    margin: 0;
+    font-weight: 400;
+}

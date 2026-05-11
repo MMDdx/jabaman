@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود | پلتفرم اجاره اقامتگاه</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="register-container">
+
+    <div class="page-header">
+        <h1>پلتفرم اجاره اقامتگاه</h1>
+        <p>به حساب کاربری خود وارد شوید و رزرو یا میزبانی را ادامه دهید.</p>
+    </div>
+
+    <div class="register-card">
+        <div class="register-header">
+            <i class="fas fa-sign-in-alt"></i>
+            <h2>ورود</h2>
+        </div>
+
+        <form class="register-form" action="#" method="POST">
+
+            <div class="form-group">
+                <label for="login-identity"> شماره موبایل <span class="required-star">*</span></label>
+                <input type="text" id="login-identity" name="login" class="form-control"
+                       placeholder="ایمیل یا شماره موبایل خود را وارد کنید" required>
+            </div>
+
+            <div class="form-group">
+                <label for="login-password">رمز عبور <span class="required-star">*</span></label>
+                <input type="password" id="login-password" name="password" class="form-control"
+                       placeholder="رمز عبور" required>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember-me" name="remember_me" value="1">
+                    <label for="remember-me">مرا به خاطر بسپار</label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                ورود <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="login-link">
+                حساب کاربری ندارید؟ <a href="#">ثبت‌نام کنید</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="site-footer">
+        © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
+    </div>
+</div>
+
+</body>
+</html>
