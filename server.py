@@ -6,19 +6,27 @@ HOST = "localhost"
 PORT = 8000
 STATIC_DIR = "static"
 
-# نگاشت مسیرهای GET به فایل‌های HTML
 GET_ROUTES = {
     "/contact": "contact.html",
     "/register": "signup.html",
     "/add-property": "add-property.html",
-    # می‌توانید login یا سایر صفحات را هم اضافه کنید
 }
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split('?')[0]
 
-        # ۱. مدیریت مسیرهای اختصاصی (صفحات HTML)
+        # ۱. ابتدا مسیرهای داینامیک را امتحان کن
+        dynamic_response = router.process_get(path)
+        if dynamic_response is not None:
+            status, content_type, body = dynamic_response
+            self.send_response(status)
+            self.send_header("Content-type", content_type)
+            self.end_headers()
+            self.wfile.write(body.encode() if isinstance(body, str) else body)
+            return
+
+        # ۲. مسیرهای استاتیک HTML
         if path in GET_ROUTES:
             file_name = GET_ROUTES[path]
             file_path = os.path.join(STATIC_DIR, file_name)
@@ -32,9 +40,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error(404, "HTML file not found")
             return
 
-        # ۲. سرو فایل‌های استاتیک (مثل style.css، تصاویر و ...)
+        # ۳. سرو فایل‌های استاتیک (CSS, JS, ...)
         if path.startswith("/static/"):
-            file_path = path[1:]   # حذف / اول
+            file_path = path[1:]
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 self.send_response(200)
                 if file_path.endswith(".css"):
@@ -50,7 +58,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error(404)
             return
 
-        # ۳. صفحه پیش‌فرض یا ۴۰۴
+        # ۴. هیچ مسیری پیدا نشد
         self.send_response(404)
         self.end_headers()
         self.wfile.write(b"Page not found")
@@ -60,7 +68,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length) if content_length else b''
 
-        # واگذاری به مسیریاب
         status, content_type, body = router.process_post(path, post_data)
 
         self.send_response(status)
