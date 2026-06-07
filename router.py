@@ -24,6 +24,8 @@ def process_get(path):
         return view_messages()
     elif path == "/admin/properties":
         return view_properties()
+    elif path == "/catalog":
+        return view_catalog()
     else:
         return None
 
@@ -168,3 +170,19 @@ def handle_add_property(params):
         return 200, "text/html; charset=utf-8", "اقامتگاه با موفقیت اضافه شد. <a href='/add-property'>بازگشت</a>"
     except Exception as e:
         return 500, "text/html; charset=utf-8", f"خطا: {e}"
+
+
+def view_catalog():
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT id, title, property_type, location, price_per_night, max_guests, bedrooms, bathrooms, description FROM properties"
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        return 500, "text/html; charset=utf-8", f"<p>خطا در واکشی اقامتگاه‌ها: {e}</p>"
+
+    from views import generate_catalog_html  # import در همینجا برای جلوگیری از وابستگی دایره‌ای (اگر نیاز شد)
+
+    html = generate_catalog_html("کاتالوگ اقامتگاه‌ها", rows)
+    return 200, "text/html; charset=utf-8", html
