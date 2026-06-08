@@ -2,7 +2,7 @@
 import urllib.parse
 import sqlite3
 from hashlib import sha256
-from views import generate_table_html
+from views import *
 
 DB_NAME = "accommodation.db"
 
@@ -18,7 +18,9 @@ def hash_password(password):
 #     مسیرهای GET
 # ========================
 def process_get(path):
-    if path == "/admin/users":
+    if path == "/" or path == "":
+        return view_home()
+    elif path == "/admin/users":
         return view_users()
     elif path == "/admin/messages":
         return view_messages()
@@ -26,6 +28,11 @@ def process_get(path):
         return view_properties()
     elif path == "/catalog":
         return view_catalog()
+
+    elif path == "/admin/users/1/edit":
+        return edit_user_form(1)
+    elif path == "/admin/properties/1/edit":
+        return edit_property_form(1)
     else:
         return None
 
@@ -86,6 +93,11 @@ def process_post(path, body):
         return handle_register(params)
     elif path == "/add-property":
         return handle_add_property(params)
+    elif path == "/admin/users/1/edit":
+        return handle_edit_user(params, 1)
+    elif path == "/admin/properties/1/edit":
+        return handle_edit_property(params, 1)
+
     else:
         return 404, "text/plain", "Not Found"
 
@@ -182,7 +194,96 @@ def view_catalog():
     except Exception as e:
         return 500, "text/html; charset=utf-8", f"<p>خطا در واکشی اقامتگاه‌ها: {e}</p>"
 
-    from views import generate_catalog_html  # import در همینجا برای جلوگیری از وابستگی دایره‌ای (اگر نیاز شد)
-
     html = generate_catalog_html("کاتالوگ اقامتگاه‌ها", rows)
+    return 200, "text/html; charset=utf-8", html
+
+def edit_user_form(user_id):
+    try:
+        conn = get_db()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        conn.close()
+        if not user:
+            return 404, "text/html; charset=utf-8", "کاربری با این شناسه یافت نشد."
+        html = generate_edit_user_form(user)
+        return 200, "text/html; charset=utf-8", html
+    except Exception as e:
+        return 500, "text/html; charset=utf-8", f"<p>خطا: {e}</p>"
+
+def edit_property_form(property_id):
+    try:
+        conn = get_db()
+        prop = conn.execute("SELECT * FROM properties WHERE id = ?", (property_id,)).fetchone()
+        conn.close()
+        if not prop:
+            return 404, "text/html; charset=utf-8", "اقامتگاهی با این شناسه یافت نشد."
+        html = generate_edit_property_form(prop)
+        return 200, "text/html; charset=utf-8", html
+    except Exception as e:
+        return 500, "text/html; charset=utf-8", f"<p>خطا: {e}</p>"
+
+def handle_edit_user(params, user_id):
+    first_name = params.get('first_name', [''])[0]
+    last_name = params.get('last_name', [''])[0]
+    phone = params.get('phone', [''])[0]
+    account_type = params.get('account_type', [''])[0]
+
+    if not all([first_name, last_name, phone, account_type]):
+        return 400, "text/html; charset=utf-8", "فیلدهای الزامی را پر کنید."
+    if account_type not in ('guest', 'host'):
+        return 400, "text/html; charset=utf-8", "نوع حساب نامعتبر است."
+
+    try:
+        conn = get_db()
+        conn.execute(
+            "UPDATE users SET first_name=?, last_name=?, phone=?, account_type=? WHERE id=?",
+            (first_name, last_name, phone, account_type, user_id)
+        )
+        conn.commit()
+        conn.close()
+        return 200, "text/html; charset=utf-8", "کاربر با موفقیت ویرایش شد. <a href='/admin/users'>بازگشت به لیست</a>"
+    except sqlite3.IntegrityError:
+        return 400, "text/html; charset=utf-8", "این شماره موبایل قبلاً ثبت شده است."
+    except Exception as e:
+        return 500, "text/html; charset=utf-8", f"خطا: {e}"
+
+def handle_edit_property(params, property_id):
+    title = params.get('title', [''])[0]
+    description = params.get('description', [''])[0]
+    property_type = params.get('property_type', [''])[0]
+    location = params.get('location', [''])[0]
+    price_per_night = params.get('price_per_night', ['0'])[0]
+    max_guests = params.get('max_guests', ['1'])[0]
+    bedrooms = params.get('bedrooms', ['0'])[0]
+    bathrooms = params.get('bathrooms', ['0'])[0]
+
+    if not all([title, property_type, location, price_per_night, max_guests]):
+        return 400, "text/html; charset=utf-8", "فیلدهای الزامی را پر کنید."
+
+    try:
+        conn = get_db()
+        conn.execute(
+            """UPDATE properties 
+               SET title=?, description=?, property_type=?, location=?, price_per_night=?, max_guests=?, bedrooms=?, bathrooms=?
+               WHERE id=?""",
+            (title, description, property_type, location, float(price_per_night),
+             int(max_guests), int(bedrooms), int(bathrooms), property_id)
+        )
+        conn.commit()
+        conn.close()
+        return 200, "text/html; charset=utf-8", "اقامتگاه با موفقیت ویرایش شد. <a href='/admin/properties'>بازگشت به لیست</a>"
+    except Exception as e:
+        return 500, "text/html; charset=utf-8", f"خطا: {e}"
+
+
+def view_home():
+    try:
+        conn = get_db()
+        # واکشی 6 اقامتگاه آخر به عنوان محبوب‌ها (می‌توان معیار دیگری گذاشت)
+        rows = conn.execute(
+            "SELECT id, title, property_type, location, price_per_night FROM properties ORDER BY id DESC LIMIT 6"
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        rows = []
+    html = generate_home_html(rows)
     return 200, "text/html; charset=utf-8", html
