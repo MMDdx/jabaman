@@ -393,3 +393,114 @@ def generate_home_html(featured_properties):
 </body>
 </html>"""
     return html
+
+
+# views.py (توابع جدید)
+
+def generate_property_detail(property_data):
+    """صفحه نمایش جزئیات یک اقامتگاه"""
+    if not property_data:
+        return generate_error_page(404, "اقامتگاه مورد نظر یافت نشد.")
+
+    icon_map = {
+        "villa": "🏡", "apartment": "🏢", "cottage": "🛖",
+        "villa-garden": "🌳", "penthouse": "🏙️", "other": "🏠"
+    }
+    icon = icon_map.get(property_data["property_type"], "🏠")
+
+    html = f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{property_data['title']} | اقامتگاه‌یاب</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="detail-container">
+    <div class="detail-header">
+        <span class="detail-icon">{icon}</span>
+        <div>
+            <h1>{property_data['title']}</h1>
+            <p class="detail-location"><i class="fas fa-map-marker-alt"></i> {property_data['location']}</p>
+        </div>
+    </div>
+    <div class="detail-info">
+        <div class="info-box"><i class="fas fa-bed"></i> {property_data.get('bedrooms', 0)} خواب</div>
+        <div class="info-box"><i class="fas fa-bath"></i> {property_data.get('bathrooms', 0)} سرویس</div>
+        <div class="info-box"><i class="fas fa-user"></i> {property_data['max_guests']} مهمان</div>
+    </div>
+    <div class="detail-price">{property_data['price_per_night']:,.0f} تومان / شب</div>
+    <div class="detail-description">{property_data.get('description', '') or 'توضیحاتی ثبت نشده است.'}</div>
+    <p style="text-align:center;margin-top:2rem;">
+        <a href="/catalog" class="btn-primary">بازگشت به کاتالوگ</a>
+    </p>
+</div>
+</body>
+</html>"""
+    return html
+
+
+def generate_message_detail(message_data):
+    """صفحه نمایش جزئیات یک پیام"""
+    if not message_data:
+        return generate_error_page(404, "پیام مورد نظر یافت نشد.")
+
+    read_status = "خوانده شده" if message_data['is_read'] else "خوانده نشده"
+    html = f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>پیام از {message_data['fullname']}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="message-detail-container">
+    <h1>پیام از {message_data['fullname']}</h1>
+    <div class="message-meta">
+        <span><strong>ایمیل:</strong> {message_data.get('email', '—')}</span>
+        <span><strong>تلفن:</strong> {message_data.get('phone', '—')}</span>
+        <span><strong>موضوع:</strong> {message_data.get('topic', '—')}</span>
+        <span><strong>وضعیت:</strong> {read_status}</span>
+        <span><strong>تاریخ:</strong> {message_data['created_at']}</span>
+    </div>
+    <div class="message-body">{message_data['message_text']}</div>
+    <p><a href="/admin/messages">بازگشت به لیست پیام‌ها</a></p>
+</div>
+</body>
+</html>"""
+    return html
+
+
+def generate_error_page(status_code, message=""):
+    """صفحه خطای سفارشی"""
+    if status_code == 404:
+        title = "صفحه پیدا نشد"
+        description = "متأسفانه صفحه‌ای که به دنبال آن هستید وجود ندارد یا حذف شده است."
+    elif status_code == 403:
+        title = "دسترسی غیرمجاز"
+        description = "شما مجوز مشاهده این صفحه را ندارید."
+    elif status_code == 500:
+        title = "خطای سرور"
+        description = "مشکلی در سرور رخ داده است. لطفاً بعداً تلاش کنید."
+    else:
+        title = "خطا"
+        description = message or "خطایی رخ داده است."
+
+    html = f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{title} | اقامتگاه‌یاب</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="error-container">
+    <div class="error-code">{status_code}</div>
+    <h1>{title}</h1>
+    <p>{description}</p>
+    <a href="/" class="btn-primary">بازگشت به خانه</a>
+</div>
+</body>
+</html>"""
+    return html

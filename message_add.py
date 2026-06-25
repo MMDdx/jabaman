@@ -1,7 +1,7 @@
 
 import sqlite3
 
-DB_NAME = "accommodation.db"
+DB_NAME = "db.sqlite"
 
 
 def add_message():
