@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ویرایش اقامتگاه</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="add-listing-container">
+    <div class="page-header">
+        <h1>ویرایش اقامتگاه</h1>
+    </div>
+    <div class="form-card">
+        <div class="form-header">
+            <i class="fas fa-edit"></i>
+            <h2>فرم ویرایش</h2>
+        </div>
+        <form method="POST" action="/admin/properties/{{ property.id }}/edit" class="listing-form">
+            <div class="form-group">
+                <label>عنوان <span class="required-star">*</span></label>
+                <input type="text" name="title" class="form-control" value="{{ property.title }}" required>
+            </div>
+            <div class="form-group">
+                <label>توضیحات</label>
+                <textarea name="description" class="form-control" rows="5">{{ property.description }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>نوع اقامتگاه <span class="required-star">*</span></label>
+                    <select name="property_type" class="form-control" required>
+                        <option value="villa" {% if property.property_type == 'villa' %}selected{% endif %}>ویلا</option>
+                        <option value="apartment" {% if property.property_type == 'apartment' %}selected{% endif %}>آپارتمان</option>
+                        <option value="cottage" {% if property.property_type == 'cottage' %}selected{% endif %}>کلبه</option>
+                        <option value="villa-garden" {% if property.property_type == 'villa-garden' %}selected{% endif %}>باغ ویلا</option>
+                        <option value="penthouse" {% if property.property_type == 'penthouse' %}selected{% endif %}>پنت‌هاوس</option>
+                        <option value="other" {% if property.property_type == 'other' %}selected{% endif %}>سایر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>موقعیت <span class="required-star">*</span></label>
+                    <input type="text" name="location" class="form-control" value="{{ property.location }}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>قیمت هر شب (تومان) <span class="required-star">*</span></label>
+                    <input type="number" name="price_per_night" class="form-control" value="{{ property.price_per_night }}" required min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label>حداکثر مهمان <span class="required-star">*</span></label>
+                    <input type="number" name="max_guests" class="form-control" value="{{ property.max_guests }}" required min="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>اتاق خواب</label>
+                    <input type="number" name="bedrooms" class="form-control" value="{{ property.bedrooms }}" min="0">
+                </div>
+                <div class="form-group">
+                    <label>سرویس بهداشتی</label>
+                    <input type="number" name="bathrooms" class="form-control" value="{{ property.bathrooms }}" min="0">
+                </div>
+            </div>
+            <button type="submit" class="submit-btn">ذخیره تغییرات</button>
+        </form>
+    </div>
+    <p style="text-align:center;margin-top:1rem;"><a href="/admin/properties">بازگشت به لیست</a></p>
+</div>
+</body>
+</html>

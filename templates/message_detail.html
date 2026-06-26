@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>پیام از {{ message.fullname }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="message-detail-container">
+    <h1>پیام از {{ message.fullname }}</h1>
+    <div class="message-meta">
+        <span><strong>ایمیل:</strong> {{ message.email }}</span>
+        <span><strong>تلفن:</strong> {{ message.phone }}</span>
+        <span><strong>موضوع:</strong> {{ message.topic }}</span>
+        <span><strong>وضعیت:</strong> {{ message.read_status }}</span>
+        <span><strong>تاریخ:</strong> {{ message.created_at }}</span>
+    </div>
+    <div class="message-body">{{ message.message_text }}</div>
+    <p><a href="/admin/messages">بازگشت به لیست پیام‌ها</a></p>
+</div>
+</body>
+</html>

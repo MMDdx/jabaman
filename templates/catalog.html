@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="catalog-container">
+    <div class="page-header">
+        <h1>{{ title }}</h1>
+        <p>اقامتگاه‌های موجود برای رزرو</p>
+    </div>
+    <div class="property-grid">
+        {% for prop in properties %}
+        <div class="property-card">
+            <div class="card-image">
+                <span class="card-type-icon">{{ prop.type_icon }}</span>
+            </div>
+            <div class="card-body">
+                <h3>{{ prop.title }}</h3>
+                <p class="card-location"><i class="fas fa-map-marker-alt"></i> {{ prop.location }}</p>
+                <p class="card-details">
+                    <span><i class="fas fa-bed"></i> {{ prop.bedrooms }} خواب</span>
+                    <span><i class="fas fa-bath"></i> {{ prop.bathrooms }} سرویس</span>
+                    <span><i class="fas fa-user"></i> {{ prop.max_guests }} مهمان</span>
+                </p>
+                <p class="card-description">{{ prop.short_desc }}</p>
+                <div class="card-footer">
+                    <span class="card-price">{{ prop.price_per_night }} تومان / شب</span>
+                    <a href="/property/{{ prop.id }}" class="card-btn">مشاهده</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <p style="text-align:center;margin-top:2rem;"><a href="/">بازگشت به خانه</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ property.title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="detail-container">
+    <div class="detail-header">
+        <span class="detail-icon">🏠</span>
+        <div>
+            <h1>{{ property.title }}</h1>
+            <p class="detail-location"><i class="fas fa-map-marker-alt"></i> {{ property.location }}</p>
+        </div>
+    </div>
+    <div class="detail-info">
+        <div class="info-box"><i class="fas fa-bed"></i> {{ property.bedrooms }} خواب</div>
+        <div class="info-box"><i class="fas fa-bath"></i> {{ property.bathrooms }} سرویس</div>
+        <div class="info-box"><i class="fas fa-user"></i> {{ property.max_guests }} مهمان</div>
+    </div>
+    <div class="detail-price">{{ property.price_per_night }} تومان / شب</div>
+    <div class="detail-description">{{ property.description }}</div>
+
+    <div style="display:flex;gap:1rem;margin:1.5rem 0;">
+        <form method="POST" action="/cart/add">
+            <input type="hidden" name="property_id" value="{{ property.id }}">
+            <button type="submit" class="btn-primary">🛒 افزودن به سبد خرید</button>
+        </form>
+        <form method="POST" action="/wishlist/add">
+            <input type="hidden" name="property_id" value="{{ property.id }}">
+            <button type="submit" class="btn-outline">❤️ افزودن به علاقمندی</button>
+        </form>
+    </div>
+
+    <h2>نظرات ({{ comments|length }})</h2>
+    {% for comment in comments %}
+    <div class="comment">
+        <strong>{{ comment.user_name }}</strong> - {{ comment.rating }}⭐
+        <p>{{ comment.comment_text }}</p>
+        <small>{{ comment.created_at }}</small>
+    </div>
+    {% endfor %}
+
+    <div style="margin-top:2rem;">
+        <h3>دیدگاه خود را بنویسید</h3>
+        <form method="POST" action="/comment/add">
+            <input type="hidden" name="property_id" value="{{ property.id }}">
+            <textarea name="comment_text" class="form-control" rows="3" required></textarea>
+            <label>امتیاز:
+                <select name="rating" class="form-control" style="width:auto;display:inline-block;">
+                    <option value="5">۵ ستاره</option>
+                    <option value="4">۴ ستاره</option>
+                    <option value="3">۳ ستاره</option>
+                    <option value="2">۲ ستاره</option>
+                    <option value="1">۱ ستاره</option>
+                </select>
+            </label>
+            <button type="submit" class="btn-primary" style="margin-top:1rem;">ارسال نظر</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

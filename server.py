@@ -1,5 +1,3 @@
-# server.py (اصلاح شده)
-
 import http.server
 import os
 import router
@@ -10,7 +8,8 @@ STATIC_DIR = "static"
 
 GET_ROUTES = {
     "/contact": "contact.html",
-    "/register": "signup.html",
+    "/register": "signup.html",   # ← نام فایل signup.html
+    "/login": "login.html",
     "/add-property": "add-property.html",
 }
 
@@ -18,7 +17,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split('?')[0]
 
-        # ۱. مسیرهای داینامیک (از جمله /, /catalog, /admin/..., /property/...)
+        # ۱. مسیرهای داینامیک (Router)
         dynamic_response = router.process_get(path)
         if dynamic_response is not None:
             status, content_type, body = dynamic_response
@@ -28,7 +27,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(body.encode() if isinstance(body, str) else body)
             return
 
-        # ۲. فایل‌های HTML استاتیک
+        # ۲. صفحات HTML استاتیک (login, signup, contact, add-property)
         if path in GET_ROUTES:
             file_name = GET_ROUTES[path]
             file_path = os.path.join(STATIC_DIR, file_name)
@@ -39,11 +38,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 with open(file_path, "rb") as f:
                     self.wfile.write(f.read())
             else:
-                # فایل HTML پیدا نشد -> 404 سفارشی
                 self.send_custom_error(404)
             return
 
-        # ۳. سایر فایل‌های استاتیک (CSS, JS, images...)
+        # ۳. فایل‌های استاتیک عمومی (CSS, JS, images)
         if path.startswith("/static/"):
             file_path = path[1:]
             if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -61,10 +59,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_custom_error(404)
             return
 
-        # ۴. هیچ مسیری یافت نشد
+        # ۴. هیچ‌کدام → ۴۰۴
         self.send_custom_error(404)
 
     def do_POST(self):
+        # (همانند قبل، تغییری نکنید)
         path = self.path.split('?')[0]
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length) if content_length else b''
@@ -75,14 +74,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body.encode() if isinstance(body, str) else body)
 
     def send_custom_error(self, code):
-        """ارسال صفحه خطای سفارشی با استفاده از router"""
+        """ارسال صفحه خطای سفارشی"""
         if code == 404:
             _, _, body = router.error_404()
         elif code == 403:
-            # می‌توانیم بعداً اضافه کنیم
-            _, _, body = router.error_403() if hasattr(router, 'error_403') else (403, "text/html", "Forbidden")
+            _, _, body = router.error_403()
         elif code == 500:
-            _, _, body = router.error_500() if hasattr(router, 'error_500') else (500, "text/html", "Internal Server Error")
+            _, _, body = router.error_500()
         else:
             body = f"Error {code}"
         self.send_response(code)

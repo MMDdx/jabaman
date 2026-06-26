@@ -1,37 +1,20 @@
-# router.py (نسخه جدید با Dynamic Routes و صفحات خطا)
-
-import urllib.parse
 import sqlite3
+import urllib.parse
 from hashlib import sha256
+import models
 from views import (
-    generate_table_html,
-    generate_catalog_html,
-    generate_home_html,
-    generate_edit_user_form,
-    generate_edit_property_form,
-    generate_property_detail,
-    generate_message_detail,
-    generate_error_page
+    generate_home_html, generate_catalog_html, generate_table_html,
+    generate_edit_user_form, generate_edit_property_form,
+    generate_error_page,
+    generate_property_detail, generate_cart_page, generate_wishlist_page, generate_message_detail
 )
 
-DB_NAME = "db.sqlite"
-
-def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+CURRENT_USER_ID = 1  # کاربر پیش‌فرض (تا زمان پیاده‌سازی نشست)
 
 def hash_password(password):
     return sha256(password.encode()).hexdigest()
 
-# -------------------------------------------------------------------
-#                توابع کمکی برای مدیریت مسیرها
-# -------------------------------------------------------------------
 def match_route(path, pattern):
-    """
-    مسیر را با الگوی حاوی بخش‌های <int:id> تطبیق می‌دهد.
-    در صورت تطابق، یک dict از پارامترها برمی‌گرداند، در غیر این صورت None.
-    """
     path_parts = path.strip('/').split('/')
     pattern_parts = pattern.strip('/').split('/')
     if len(path_parts) != len(pattern_parts):
@@ -39,7 +22,7 @@ def match_route(path, pattern):
     params = {}
     for pp, pat in zip(path_parts, pattern_parts):
         if pat.startswith('<') and pat.endswith('>'):
-            param_type = pat[1:-1].split(':')[0]  # int یا str
+            param_type = pat[1:-1].split(':')[0]
             param_name = pat[1:-1].split(':')[1] if ':' in pat[1:-1] else 'id'
             if param_type == 'int':
                 try:
@@ -53,184 +36,104 @@ def match_route(path, pattern):
                 return None
     return params
 
-# -------------------------------------------------------------------
-#                     مسیرهای GET
-# -------------------------------------------------------------------
+# ========================
+#         GET
+# ========================
 def process_get(path):
-    # حذف query string (اگر باشد)
     path = path.split('?')[0]
 
-    # ----------- صفحات اصلی -----------
     if path == "/" or path == "":
-        return view_home()
-    elif path == "/catalog":
-        return view_catalog()
-    elif path == "/admin/users":
-        return view_users()
-    elif path == "/admin/messages":
-        return view_messages()
-    elif path == "/admin/properties":
-        return view_properties()
+        featured = models.get_featured_properties()
+        return 200, "text/html; charset=utf-8", generate_home_html(featured)
 
-    # ----------- نمایش تکی -----------
-    # /property/<int:id>
+    if path == "/catalog":
+        properties = models.get_all_properties()
+        return 200, "text/html; charset=utf-8", generate_catalog_html("کاتالوگ اقامتگاه‌ها", properties)
+
+    if path == "/cart":
+        items = models.get_cart_items(CURRENT_USER_ID)
+        return 200, "text/html; charset=utf-8", generate_cart_page(items)
+
+    if path == "/wishlist":
+        items = models.get_wishlist_items(CURRENT_USER_ID)
+        return 200, "text/html; charset=utf-8", generate_wishlist_page(items)
+
+    if path == "/admin/users":
+        users = models.get_all_users()
+        return 200, "text/html; charset=utf-8", generate_table_html("کاربران", ["شناسه", "نام", "نام خانوادگی", "موبایل", "نوع حساب", "تاریخ ثبت‌نام"], users)
+
+    if path == "/admin/messages":
+        messages = models.get_all_messages()
+        return 200, "text/html; charset=utf-8", generate_table_html("پیام‌ها", ["شناسه", "فرستنده", "ایمیل", "تلفن", "موضوع", "متن", "خوانده‌شده", "تاریخ"], messages)
+
+    if path == "/admin/properties":
+        properties = models.get_all_properties()
+        return 200, "text/html; charset=utf-8", generate_table_html("اقامتگاه‌ها", ["شناسه", "میزبان", "عنوان", "نوع", "موقعیت", "قیمت/شب", "ظرفیت", "اتاق", "سرویس", "تاریخ ثبت"], properties)
+
+    # ---------- Dynamic routes ----------
     params = match_route(path, "/property/<int:id>")
     if params:
-        return view_property_detail(params['id'])
+        prop = models.get_property(params['id'])
+        if not prop:
+            return 404, "text/html; charset=utf-8", generate_error_page(404)
+        comments = models.get_comments_for_property(params['id'])
+        return 200, "text/html; charset=utf-8", generate_property_detail(prop, comments)
 
-    # /message/<int:id>
     params = match_route(path, "/message/<int:id>")
     if params:
-        return view_message_detail(params['id'])
+        msg = models.get_message(params['id'])
+        if not msg:
+            return 404, "text/html; charset=utf-8", generate_error_page(404)
+        return 200, "text/html; charset=utf-8", generate_message_detail(msg)
 
-    # ----------- فرم‌های ویرایش -----------
-    # /admin/users/<int:id>/edit
     params = match_route(path, "/admin/users/<int:id>/edit")
     if params:
-        return edit_user_form(params['id'])
+        user = models.get_user(params['id'])
+        if not user:
+            return 404, "text/html; charset=utf-8", generate_error_page(404)
+        return 200, "text/html; charset=utf-8", generate_edit_user_form(user)
 
-    # /admin/properties/<int:id>/edit
     params = match_route(path, "/admin/properties/<int:id>/edit")
     if params:
-        return edit_property_form(params['id'])
+        prop = models.get_property(params['id'])
+        if not prop:
+            return 404, "text/html; charset=utf-8", generate_error_page(404)
+        return 200, "text/html; charset=utf-8", generate_edit_property_form(prop)
 
-    # ----------- اگر هیچ‌کدام نبود، 404 سفارشی -----------
-    return None  # اجازه می‌دهیم server.py خودش صفحه 404 را مدیریت کند (یا از router.error_404 استفاده می‌کنیم)
+    return None
 
-# -------------------------------------------------------------------
-#                     مسیرهای POST
-# -------------------------------------------------------------------
+# ========================
+#         POST
+# ========================
 def process_post(path, body):
     path = path.split('?')[0]
     params = urllib.parse.parse_qs(body.decode()) if body else {}
 
-    # مسیرهای ثابت
     if path == "/contact":
         return handle_contact(params)
-    elif path == "/register":
+    if path == "/register":
         return handle_register(params)
-    elif path == "/add-property":
+    if path == "/add-property":
         return handle_add_property(params)
+    if path == "/cart/add":
+        return handle_add_to_cart(params)
+    if path == "/wishlist/add":
+        return handle_add_to_wishlist(params)
+    if path == "/comment/add":
+        return handle_add_comment(params)
 
-    # مسیرهای ویرایش داینامیک
-    route_params = match_route(path, "/admin/users/<int:id>/edit")
-    if route_params:
-        return handle_edit_user(params, route_params['id'])
+    p = match_route(path, "/admin/users/<int:id>/edit")
+    if p:
+        return handle_edit_user(params, p['id'])
 
-    route_params = match_route(path, "/admin/properties/<int:id>/edit")
-    if route_params:
-        return handle_edit_property(params, route_params['id'])
+    p = match_route(path, "/admin/properties/<int:id>/edit")
+    if p:
+        return handle_edit_property(params, p['id'])
 
     return 404, "text/html; charset=utf-8", generate_error_page(404)
 
-# -------------------------------------------------------------------
-#                     توابع نمایش (GET)
-# -------------------------------------------------------------------
-def view_home():
-    try:
-        conn = get_db()
-        rows = conn.execute(
-            "SELECT id, title, property_type, location, price_per_night FROM properties ORDER BY id DESC LIMIT 6"
-        ).fetchall()
-        conn.close()
-    except Exception as e:
-        rows = []
-    html = generate_home_html(rows)
-    return 200, "text/html; charset=utf-8", html
-
-def view_catalog():
-    try:
-        conn = get_db()
-        rows = conn.execute("SELECT id, title, property_type, location, price_per_night, max_guests, bedrooms, bathrooms, description FROM properties").fetchall()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    html = generate_catalog_html("کاتالوگ اقامتگاه‌ها", rows)
-    return 200, "text/html; charset=utf-8", html
-
-def view_users():
-    try:
-        conn = get_db()
-        rows = conn.execute("SELECT id, first_name, last_name, phone, account_type, created_at FROM users").fetchall()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    html = generate_table_html("کاربران", ["شناسه", "نام", "نام خانوادگی", "موبایل", "نوع حساب", "تاریخ ثبت‌نام"], rows)
-    return 200, "text/html; charset=utf-8", html
-
-def view_messages():
-    try:
-        conn = get_db()
-        rows = conn.execute("SELECT id, fullname, email, phone, topic, message_text, is_read, created_at FROM messages").fetchall()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    html = generate_table_html("پیام‌ها", ["شناسه", "فرستنده", "ایمیل", "تلفن", "موضوع", "متن", "خوانده‌شده", "تاریخ"], rows)
-    return 200, "text/html; charset=utf-8", html
-
-def view_properties():
-    try:
-        conn = get_db()
-        rows = conn.execute("SELECT id, host_id, title, property_type, location, price_per_night, max_guests, bedrooms, bathrooms, created_at FROM properties").fetchall()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    html = generate_table_html("اقامتگاه‌ها", ["شناسه", "میزبان", "عنوان", "نوع", "موقعیت", "قیمت/شب", "ظرفیت", "اتاق", "سرویس", "تاریخ ثبت"], rows)
-    return 200, "text/html; charset=utf-8", html
-
-def view_property_detail(property_id):
-    try:
-        conn = get_db()
-        prop = conn.execute("SELECT * FROM properties WHERE id=?", (property_id,)).fetchone()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    if not prop:
-        return 404, "text/html; charset=utf-8", generate_error_page(404)
-    html = generate_property_detail(prop)
-    return 200, "text/html; charset=utf-8", html
-
-def view_message_detail(message_id):
-    try:
-        conn = get_db()
-        msg = conn.execute("SELECT * FROM messages WHERE id=?", (message_id,)).fetchone()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    if not msg:
-        return 404, "text/html; charset=utf-8", generate_error_page(404)
-    html = generate_message_detail(msg)
-    return 200, "text/html; charset=utf-8", html
-
-def edit_user_form(user_id):
-    try:
-        conn = get_db()
-        user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    if not user:
-        return 404, "text/html; charset=utf-8", generate_error_page(404)
-    html = generate_edit_user_form(user)
-    return 200, "text/html; charset=utf-8", html
-
-def edit_property_form(property_id):
-    try:
-        conn = get_db()
-        prop = conn.execute("SELECT * FROM properties WHERE id=?", (property_id,)).fetchone()
-        conn.close()
-    except Exception as e:
-        return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
-    if not prop:
-        return 404, "text/html; charset=utf-8", generate_error_page(404)
-    html = generate_edit_property_form(prop)
-    return 200, "text/html; charset=utf-8", html
-
-# -------------------------------------------------------------------
-#                     مدیریت POST (درج و ویرایش)
-# -------------------------------------------------------------------
+# ---------- handler functions ----------
 def handle_contact(params):
-    # ... (همان کد قبلی)
     fullname = params.get('fullname', [''])[0]
     email = params.get('email', [''])[0]
     phone = params.get('phone', [''])[0]
@@ -239,23 +142,19 @@ def handle_contact(params):
     if not fullname or not message_text:
         return 400, "text/html; charset=utf-8", "نام و متن پیام الزامی است."
     try:
-        conn = get_db()
-        conn.execute("INSERT INTO messages (fullname, email, phone, topic, message_text) VALUES (?,?,?,?,?)",
-                     (fullname, email, phone, topic, message_text))
-        conn.commit()
-        conn.close()
+        models.create_message(fullname, email, phone, topic, message_text)
         return 200, "text/html; charset=utf-8", "پیام با موفقیت ثبت شد. <a href='/contact'>بازگشت</a>"
     except Exception as e:
         return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
 
 def handle_register(params):
-    # ... (همان کد قبلی)
     first_name = params.get('first_name', [''])[0]
     last_name = params.get('last_name', [''])[0]
     phone = params.get('phone', [''])[0]
     password = params.get('password', [''])[0]
     confirm_password = params.get('confirm_password', [''])[0]
     account_type = params.get('account_type', [''])[0]
+
     if not all([first_name, last_name, phone, password, confirm_password, account_type]):
         return 400, "text/html; charset=utf-8", "فیلدهای الزامی را پر کنید."
     if password != confirm_password:
@@ -264,12 +163,9 @@ def handle_register(params):
         return 400, "text/html; charset=utf-8", "رمز عبور باید حداقل ۸ کاراکتر باشد."
     if account_type not in ('guest', 'host'):
         return 400, "text/html; charset=utf-8", "نوع حساب نامعتبر است."
+
     try:
-        conn = get_db()
-        conn.execute("INSERT INTO users (first_name, last_name, phone, password_hash, account_type) VALUES (?,?,?,?,?)",
-                     (first_name, last_name, phone, hash_password(password), account_type))
-        conn.commit()
-        conn.close()
+        models.create_user(first_name, last_name, phone, hash_password(password), account_type)
         return 200, "text/html; charset=utf-8", "ثبت‌نام با موفقیت انجام شد. <a href='/register'>بازگشت</a>"
     except sqlite3.IntegrityError:
         return 400, "text/html; charset=utf-8", "این شماره موبایل قبلاً ثبت شده است."
@@ -277,7 +173,6 @@ def handle_register(params):
         return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
 
 def handle_add_property(params):
-    # ... (همان کد قبلی)
     host_id = params.get('host_id', ['1'])[0]
     title = params.get('title', [''])[0]
     description = params.get('description', [''])[0]
@@ -287,15 +182,14 @@ def handle_add_property(params):
     max_guests = params.get('max_guests', ['1'])[0]
     bedrooms = params.get('bedrooms', ['0'])[0]
     bathrooms = params.get('bathrooms', ['0'])[0]
+
     if not all([title, property_type, location, price_per_night, max_guests]):
         return 400, "text/html; charset=utf-8", "فیلدهای الزامی را پر کنید."
     try:
-        conn = get_db()
-        conn.execute("""INSERT INTO properties (host_id, title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms)
-                        VALUES (?,?,?,?,?,?,?,?,?)""",
-                     (host_id, title, description, property_type, location, float(price_per_night), int(max_guests), int(bedrooms), int(bathrooms)))
-        conn.commit()
-        conn.close()
+        models.create_property(
+            host_id, title, description, property_type, location,
+            float(price_per_night), int(max_guests), int(bedrooms), int(bathrooms)
+        )
         return 200, "text/html; charset=utf-8", "اقامتگاه با موفقیت اضافه شد. <a href='/add-property'>بازگشت</a>"
     except Exception as e:
         return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
@@ -310,11 +204,7 @@ def handle_edit_user(params, user_id):
     if account_type not in ('guest', 'host'):
         return 400, "text/html; charset=utf-8", "نوع حساب نامعتبر است."
     try:
-        conn = get_db()
-        conn.execute("UPDATE users SET first_name=?, last_name=?, phone=?, account_type=? WHERE id=?",
-                     (first_name, last_name, phone, account_type, user_id))
-        conn.commit()
-        conn.close()
+        models.update_user(user_id, first_name, last_name, phone, account_type)
         return 200, "text/html; charset=utf-8", "کاربر با موفقیت ویرایش شد. <a href='/admin/users'>بازگشت</a>"
     except sqlite3.IntegrityError:
         return 400, "text/html; charset=utf-8", "این شماره موبایل قبلاً ثبت شده است."
@@ -333,18 +223,37 @@ def handle_edit_property(params, property_id):
     if not all([title, property_type, location, price_per_night, max_guests]):
         return 400, "text/html; charset=utf-8", "فیلدهای الزامی را پر کنید."
     try:
-        conn = get_db()
-        conn.execute("""UPDATE properties SET title=?, description=?, property_type=?, location=?, price_per_night=?, max_guests=?, bedrooms=?, bathrooms=?
-                        WHERE id=?""",
-                     (title, description, property_type, location, float(price_per_night), int(max_guests), int(bedrooms), int(bathrooms), property_id))
-        conn.commit()
-        conn.close()
+        models.update_property(
+            property_id, title, description, property_type, location,
+            float(price_per_night), int(max_guests), int(bedrooms), int(bathrooms)
+        )
         return 200, "text/html; charset=utf-8", "اقامتگاه با موفقیت ویرایش شد. <a href='/admin/properties'>بازگشت</a>"
     except Exception as e:
         return 500, "text/html; charset=utf-8", generate_error_page(500, str(e))
 
+def handle_add_to_cart(params):
+    property_id = params.get('property_id', [None])[0]
+    if not property_id:
+        return 400, "text/plain", "شناسه اقامتگاه الزامی است"
+    models.add_to_cart(CURRENT_USER_ID, property_id)
+    return 303, "text/html", '<meta http-equiv="refresh" content="0;url=/cart">'
 
-# در router.py اضافه کنید:
+def handle_add_to_wishlist(params):
+    property_id = params.get('property_id', [None])[0]
+    if not property_id:
+        return 400, "text/plain", "شناسه اقامتگاه الزامی است"
+    models.add_to_wishlist(CURRENT_USER_ID, property_id)
+    return 303, "text/html", '<meta http-equiv="refresh" content="0;url=/wishlist">'
+
+def handle_add_comment(params):
+    property_id = params.get('property_id', [None])[0]
+    comment_text = params.get('comment_text', [''])[0]
+    rating = params.get('rating', ['5'])[0]
+    if not property_id or not comment_text:
+        return 400, "text/plain", "شناسه و متن نظر الزامی است"
+    models.add_comment(CURRENT_USER_ID, property_id, comment_text, int(rating))
+    return 303, "text/html", f'<meta http-equiv="refresh" content="0;url=/property/{property_id}">'
+
 def error_404():
     return 404, "text/html; charset=utf-8", generate_error_page(404)
 

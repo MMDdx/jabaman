@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>سبد خرید</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container" style="max-width:800px;margin:2rem auto;">
+    <h1>سبد خرید شما</h1>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>اقامتگاه</th>
+                <th>موقعیت</th>
+                <th>قیمت (هر شب)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.title }}</td>
+                <td>{{ item.location }}</td>
+                <td>{{ item.price_per_night }} تومان</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="text-align:left;font-size:1.2rem;margin-top:1rem;">جمع: {{ total }} تومان</p>
+    <p><a href="/catalog">بازگشت به کاتالوگ</a></p>
+</div>
+</body>
+</html>
