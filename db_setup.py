@@ -66,6 +66,12 @@ EXPECTED_SCHEMA = {
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE",
         "FOREIGN KEY (property_id)": "REFERENCES properties(id) ON DELETE CASCADE"
+    },
+    "sessions": {
+        "id": "TEXT PRIMARY KEY",               # شناسه نشست (UUID)
+        "user_id": "INTEGER NOT NULL",
+        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE"
     }
 }
 
@@ -147,7 +153,15 @@ def create_tables(conn):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
-        )"""
+        )""",
+        """CREATE TABLE IF NOT EXISTS sessions
+           (
+               id         TEXT PRIMARY KEY,
+               user_id    INTEGER NOT NULL,
+               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+               FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+           )"""
+
     ]
     try:
         cursor = conn.cursor()

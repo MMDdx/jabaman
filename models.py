@@ -1,4 +1,6 @@
 import sqlite3
+import uuid
+
 
 DB_NAME = "db.sqlite"
 
@@ -138,3 +140,36 @@ def add_to_wishlist(user_id, property_id):
     conn.execute("INSERT OR IGNORE INTO wishlist (user_id, property_id) VALUES (?,?)", (user_id, property_id))
     conn.commit()
     conn.close()
+
+
+def create_session(user_id):
+    session_id = str(uuid.uuid4())
+    conn = get_db()
+    conn.execute("INSERT INTO sessions (id, user_id) VALUES (?, ?)", (session_id, user_id))
+    conn.commit()
+    conn.close()
+    return session_id
+
+def get_user_by_session(session_id):
+    if not session_id:
+        return None
+    conn = get_db()
+    session = conn.execute(
+        "SELECT user_id FROM sessions WHERE id = ?", (session_id,)
+    ).fetchone()
+    conn.close()
+    if session:
+        return session["user_id"]
+    return None
+
+def delete_session(session_id):
+    conn = get_db()
+    conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    conn.commit()
+    conn.close()
+
+def get_user_by_phone(phone):
+    conn = get_db()
+    user = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
+    conn.close()
+    return user

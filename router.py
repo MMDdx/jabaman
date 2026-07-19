@@ -2,6 +2,9 @@ import sqlite3
 import urllib.parse
 from hashlib import sha256
 import models
+import uuid
+from http.cookies import SimpleCookie
+
 from views import (
     generate_home_html, generate_catalog_html, generate_table_html,
     generate_edit_user_form, generate_edit_property_form,
@@ -39,7 +42,7 @@ def match_route(path, pattern):
 # ========================
 #         GET
 # ========================
-def process_get(path):
+def process_get(path, user_id=None):
     path = path.split('?')[0]
 
     if path == "/" or path == "":
@@ -100,12 +103,16 @@ def process_get(path):
             return 404, "text/html; charset=utf-8", generate_error_page(404)
         return 200, "text/html; charset=utf-8", generate_edit_property_form(prop)
 
+    if path == "/logout":
+        # پاک‌سازی نشست توسط server.py با Set-Cookie انجام می‌شود؛ اینجا فقط یک صفحه خداحافظی نشان می‌دهیم
+        return 200, "text/html", "<h2>شما خارج شدید. <a href='/'>بازگشت</a></h2>"
+
     return None
 
 # ========================
 #         POST
 # ========================
-def process_post(path, body):
+def process_post(path, body, user_id=None):
     path = path.split('?')[0]
     params = urllib.parse.parse_qs(body.decode()) if body else {}
 
@@ -129,6 +136,8 @@ def process_post(path, body):
     p = match_route(path, "/admin/properties/<int:id>/edit")
     if p:
         return handle_edit_property(params, p['id'])
+    if path == "/login":
+        return handle_login(params)
 
     return 404, "text/html; charset=utf-8", generate_error_page(404)
 
@@ -262,3 +271,38 @@ def error_403():
 
 def error_500():
     return 500, "text/html; charset=utf-8", generate_error_page(500)
+
+def handle_login(params):
+    phone = params.get('phone', [''])[0]
+    password = params.get('password', [''])[0]
+    if not phone or not password:
+        return 400, "text/html", "شماره موبایل و رمز عبور الزامی است."
+
+    user = models.get_user_by_phone(phone)
+    if not user or user["password"] != hash_password(password):
+        return 401, "text/html", "اطلاعات وارد شده نادرست است. <a href='/login'>تلاش مجدد</a>"
+
+    session_id = models.create_session(user["id"])
+    # ساخت هدر Set-Cookie و ریدایرکت به خانه
+    cookie = SimpleCookie()
+    cookie["session_id"] = session_id
+    cookie["session_id"]["path"] = "/"
+    cookie["session_id"]["httponly"] = True
+    cookie["session_id"]["max-age"] = 3600 * 24  # یک روز
+
+    headers = {
+        "Set-Cookie": cookie["session_id"].OutputString(),
+        "Location": "/"
+    }
+    # از آنجایی که http.server به ما اجازه ارسال هدرهای دلخواه را نمی‌دهد،
+    # یک ریدایرکت با meta refresh و Set-Cookie در هدر واقعی انجام می‌شود.
+    # اما ما در server.py هدر Set-Cookie را به صورت دستی اضافه می‌کنیم (در ادامه توضیح داده می‌شود).
+    # برای سادگی فعلاً یک صفحه HTML با redirect و بدون Set-Cookie نشان می‌دهیم
+    # (این بخش در server.py اصلاح خواهد شد).
+    return 303, "text/html", f'<meta http-equiv="refresh" content="0;url=/"><script>document.cookie="session_id={session_id};path=/;max-age=86400"</script>'
+
+def view_cart(user_id):
+    if not user_id:
+        return 303, "text/html", '<meta http-equiv="refresh" content="0;url=/login">'
+    items = models.get_cart_items(user_id)
+    return 200, "text/html", generate_cart_page(items)

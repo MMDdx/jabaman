@@ -1,5 +1,8 @@
 import http.server
 import os
+from http.cookies import SimpleCookie
+
+import models
 import router
 
 HOST = "localhost"
@@ -15,10 +18,12 @@ GET_ROUTES = {
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        session_id = self.get_session_id()
+        user_id = models.get_user_by_session(session_id)  # import models
         path = self.path.split('?')[0]
 
         # ۱. مسیرهای داینامیک (Router)
-        dynamic_response = router.process_get(path)
+        dynamic_response = router.process_get(path, user_id)
         if dynamic_response is not None:
             status, content_type, body = dynamic_response
             self.send_response(status)
@@ -63,11 +68,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_custom_error(404)
 
     def do_POST(self):
+        session_id = self.get_session_id()
+        user_id = models.get_user_by_session(session_id)  # import models
         # (همانند قبل، تغییری نکنید)
         path = self.path.split('?')[0]
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length) if content_length else b''
-        status, content_type, body = router.process_post(path, post_data)
+        status, content_type, body = router.process_post(path, post_data, user_id)
         self.send_response(status)
         self.send_header("Content-type", content_type)
         self.end_headers()
@@ -87,6 +94,15 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(body.encode() if isinstance(body, str) else body)
+
+    def get_session_id(self):
+        cookie_header = self.headers.get('Cookie')
+        if cookie_header:
+            cookies = SimpleCookie()
+            cookies.load(cookie_header)
+            if 'session_id' in cookies:
+                return cookies['session_id'].value
+        return None
 
 def start():
     server_address = (HOST, PORT)
