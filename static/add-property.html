@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>درج اقامتگاه جدید | پلتفرم اجاره اقامتگاه</title>
-    <link rel="stylesheet" href="static/style.css">
+    <!-- اصلاح: مسیر CSS مطلق شد -->
+    <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
 </head>
 <body>
 
@@ -23,11 +23,18 @@
             <h2>فرم افزودن اقامتگاه</h2>
         </div>
 
-        <form class="listing-form" action="#" method="POST" enctype="multipart/form-data">
+        <!--
+            اصلاحات:
+            - action به /add-property
+            - enctype حذف شد (چون فایل‌ها سرو نمی‌شوند)
+            - نام فیلدها با کنترلر همخوان شد: title, property_type, price_per_night, ...
+            - host_id حذف شد (از نشست گرفته می‌شود)
+        -->
+        <form class="listing-form" action="/add-property" method="POST">
 
             <div class="form-group">
                 <label for="property-title">عنوان اقامتگاه <span class="required-star">*</span></label>
-                <input type="text" id="property-title" name="property_title" class="form-control"
+                <input type="text" id="property-title" name="title" class="form-control"
                        placeholder="مثلاً: ویلای ساحلی رویایی" required>
             </div>
 
@@ -87,61 +94,45 @@
                 <label>امکانات</label>
                 <div class="amenities-grid">
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-wifi" name="amenities[]" value="wifi">
+                        <input type="checkbox" id="amenity-wifi" name="amenities" value="wifi">
                         <label for="amenity-wifi">وای‌فای</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-parking" name="amenities[]" value="parking">
+                        <input type="checkbox" id="amenity-parking" name="amenities" value="parking">
                         <label for="amenity-parking">پارکینگ</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-pool" name="amenities[]" value="pool">
+                        <input type="checkbox" id="amenity-pool" name="amenities" value="pool">
                         <label for="amenity-pool">استخر</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-kitchen" name="amenities[]" value="kitchen">
+                        <input type="checkbox" id="amenity-kitchen" name="amenities" value="kitchen">
                         <label for="amenity-kitchen">آشپزخانه</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-ac" name="amenities[]" value="air_conditioning">
+                        <input type="checkbox" id="amenity-ac" name="amenities" value="air_conditioning">
                         <label for="amenity-ac">کولر/گرمایش</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-tv" name="amenities[]" value="tv">
+                        <input type="checkbox" id="amenity-tv" name="amenities" value="tv">
                         <label for="amenity-tv">تلویزیون</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-washer" name="amenities[]" value="washer">
+                        <input type="checkbox" id="amenity-washer" name="amenities" value="washer">
                         <label for="amenity-washer">ماشین لباسشویی</label>
                     </div>
                     <div class="amenity-item">
-                        <input type="checkbox" id="amenity-pet" name="amenities[]" value="pet_friendly">
+                        <input type="checkbox" id="amenity-pet" name="amenities" value="pet_friendly">
                         <label for="amenity-pet">مناسب حیوانات</label>
                     </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>تصویر اصلی اقامتگاه <span class="required-star">*</span></label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="main-image" name="main_image" accept="image/*" required>
-                    <label for="main-image" class="file-label">
-                        <i class="fas fa-cloud-upload-alt"></i> انتخاب تصویر اصلی
-                    </label>
-                    <span style="color:#6c7a8a; font-size:0.9rem;">حداقل یک تصویر الزامی است</span>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>تصاویر بیشتر</label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="gallery-images" name="gallery_images[]" accept="image/*" multiple>
-                    <label for="gallery-images" class="file-label">
-                        <i class="fas fa-images"></i> بارگذاری چند تصویر
-                    </label>
-                    <span style="color:#6c7a8a; font-size:0.9rem;">می‌توانید چند فایل انتخاب کنید</span>
-                </div>
-            </div>
+            <!--
+                نکته: فیلدهای file حذف شدند چون backend فعلی از upload تصویر
+                پشتیبانی نمی‌کند. در صورت نیاز، باید multipart/form-data و
+                ذخیره‌ی فایل در پوشه static/uploads/ پیاده‌سازی شود.
+            -->
 
             <button type="submit" class="submit-btn">
                 درج اقامتگاه <i class="fas fa-chevron-left"></i>

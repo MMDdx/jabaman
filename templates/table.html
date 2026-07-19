@@ -14,16 +14,31 @@
                 {% for col in columns %}
                 <th>{{ col }}</th>
                 {% endfor %}
+                <th>عملیات</th>
             </tr>
         </thead>
         <tbody>
-            {% for row in rows %}
-            <tr>
-                {% for col in columns %}
-                <td>{{ row[col] if row[col] is not none else '' }}</td>
+            {% if rows %}
+                {% for row in rows %}
+                <tr>
+                    {% for col in columns %}
+                    <td>{{ row[col] }}</td>
+                    {% endfor %}
+                    <td>
+                        <!-- اصلاح: لینک‌های ویرایش بر اساس نوع جدول -->
+                        {% if title == 'کاربران' %}
+                            <a href="/admin/users/{{ row.id }}/edit">ویرایش</a>
+                        {% elif title == 'اقامتگاه‌ها' %}
+                            <a href="/admin/properties/{{ row.id }}/edit">ویرایش</a>
+                        {% elif title == 'پیام‌ها' %}
+                            <a href="/message/{{ row.id }}">مشاهده</a>
+                        {% endif %}
+                    </td>
+                </tr>
                 {% endfor %}
-            </tr>
-            {% endfor %}
+            {% else %}
+                <tr><td colspan="{{ columns|length }}" style="text-align:center;">داده‌ای موجود نیست</td></tr>
+            {% endif %}
         </tbody>
     </table>
     <p style="text-align:center;margin-top:2rem;"><a href="/">بازگشت</a></p>

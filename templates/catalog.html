@@ -2,38 +2,61 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart">🛒 سبد</a>
+            <a href="/wishlist">❤️ علاقه‌مندی</a>
+            <a href="/logout" class="btn-primary">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline">ثبت‌نام</a>
+            <a href="/login" class="btn-primary">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
 <div class="catalog-container">
     <div class="page-header">
         <h1>{{ title }}</h1>
         <p>اقامتگاه‌های موجود برای رزرو</p>
     </div>
     <div class="property-grid">
-        {% for prop in properties %}
-        <div class="property-card">
-            <div class="card-image">
-                <span class="card-type-icon">{{ prop.type_icon }}</span>
-            </div>
-            <div class="card-body">
-                <h3>{{ prop.title }}</h3>
-                <p class="card-location"><i class="fas fa-map-marker-alt"></i> {{ prop.location }}</p>
-                <p class="card-details">
-                    <span><i class="fas fa-bed"></i> {{ prop.bedrooms }} خواب</span>
-                    <span><i class="fas fa-bath"></i> {{ prop.bathrooms }} سرویس</span>
-                    <span><i class="fas fa-user"></i> {{ prop.max_guests }} مهمان</span>
-                </p>
-                <p class="card-description">{{ prop.short_desc }}</p>
-                <div class="card-footer">
-                    <span class="card-price">{{ prop.price_per_night }} تومان / شب</span>
-                    <a href="/property/{{ prop.id }}" class="card-btn">مشاهده</a>
+        {% if properties %}
+            {% for prop in properties %}
+            <div class="property-card">
+                <div class="card-image">
+                    <span class="card-type-icon">{{ prop.type_icon }}</span>
+                </div>
+                <div class="card-body">
+                    <h3>{{ prop.title }}</h3>
+                    <p class="card-location"><i class="fas fa-map-marker-alt"></i> {{ prop.location }}</p>
+                    <p class="card-details">
+                        <span><i class="fas fa-bed"></i> {{ prop.bedrooms }} خواب</span>
+                        <span><i class="fas fa-bath"></i> {{ prop.bathrooms }} سرویس</span>
+                        <span><i class="fas fa-user"></i> {{ prop.max_guests }} مهمان</span>
+                    </p>
+                    <p class="card-description">{{ prop.short_desc }}</p>
+                    <div class="card-footer">
+                        <span class="card-price">{{ prop.price_per_night }} تومان / شب</span>
+                        <a href="/property/{{ prop.id }}" class="card-btn">مشاهده</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
+        {% else %}
+            <p style="text-align:center;grid-column:1/-1;">هنوز اقامتگاهی ثبت نشده است.</p>
+        {% endif %}
     </div>
     <p style="text-align:center;margin-top:2rem;"><a href="/">بازگشت به خانه</a></p>
 </div>

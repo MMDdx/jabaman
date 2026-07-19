@@ -7,6 +7,24 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart">🛒 سبد</a>
+            <a href="/wishlist">❤️ علاقه‌مندی</a>
+            <a href="/logout" class="btn-primary">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline">ثبت‌نام</a>
+            <a href="/login" class="btn-primary">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
 <div class="detail-container">
     <div class="detail-header">
         <span class="detail-icon">🏠</span>
@@ -20,9 +38,11 @@
         <div class="info-box"><i class="fas fa-bath"></i> {{ property.bathrooms }} سرویس</div>
         <div class="info-box"><i class="fas fa-user"></i> {{ property.max_guests }} مهمان</div>
     </div>
-    <div class="detail-price">{{ property.price_per_night }} تومان / شب</div>
+    <div class="detail-price">{{ property.price_per_night_fmt }} تومان / شب</div>
     <div class="detail-description">{{ property.description }}</div>
 
+    <!-- اصلاح: استفاده از price_per_night_fmt و نمایش نوار ناوبری -->
+    {% if user_id %}
     <div style="display:flex;gap:1rem;margin:1.5rem 0;">
         <form method="POST" action="/cart/add">
             <input type="hidden" name="property_id" value="{{ property.id }}">
@@ -33,16 +53,27 @@
             <button type="submit" class="btn-outline">❤️ افزودن به علاقمندی</button>
         </form>
     </div>
-
-    <h2>نظرات ({{ comments|length }})</h2>
-    {% for comment in comments %}
-    <div class="comment">
-        <strong>{{ comment.user_name }}</strong> - {{ comment.rating }}⭐
-        <p>{{ comment.comment_text }}</p>
-        <small>{{ comment.created_at }}</small>
+    {% else %}
+    <div style="margin:1.5rem 0;padding:1rem;background:#fff3cd;border-radius:8px;">
+        برای رزرو یا افزودن به علاقه‌مندی، لطفاً <a href="/login">وارد شوید</a> یا <a href="/register">ثبت‌نام کنید</a>.
     </div>
-    {% endfor %}
+    {% endif %}
 
+    <!-- اصلاح: استفاده از comments_count به جای comments|length -->
+    <h2>نظرات ({{ comments_count }})</h2>
+    {% if comments %}
+        {% for comment in comments %}
+        <div class="comment">
+            <strong>{{ comment.user_name }}</strong> - {{ comment.rating }}⭐
+            <p>{{ comment.comment_text }}</p>
+            <small>{{ comment.created_at }}</small>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#888;">هنوز نظری ثبت نشده است.</p>
+    {% endif %}
+
+    {% if user_id %}
     <div style="margin-top:2rem;">
         <h3>دیدگاه خود را بنویسید</h3>
         <form method="POST" action="/comment/add">
@@ -60,6 +91,7 @@
             <button type="submit" class="btn-primary" style="margin-top:1rem;">ارسال نظر</button>
         </form>
     </div>
+    {% endif %}
 </div>
 </body>
 </html>

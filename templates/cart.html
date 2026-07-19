@@ -6,14 +6,28 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/cart">🛒 سبد</a>
+            <a href="/wishlist">❤️ علاقه‌مندی</a>
+            <a href="/logout" class="btn-primary">خروج</a>
+        </nav>
+    </div>
+</header>
 <div class="container" style="max-width:800px;margin:2rem auto;">
     <h1>سبد خرید شما</h1>
+    {% if items %}
     <table class="data-table">
         <thead>
             <tr>
                 <th>اقامتگاه</th>
                 <th>موقعیت</th>
                 <th>قیمت (هر شب)</th>
+                <th>عملیات</th>
             </tr>
         </thead>
         <tbody>
@@ -22,11 +36,15 @@
                 <td>{{ item.title }}</td>
                 <td>{{ item.location }}</td>
                 <td>{{ item.price_per_night }} تومان</td>
+                <td><a href="/cart/{{ item.cart_id }}/remove" style="color:#dc3545;">حذف</a></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     <p style="text-align:left;font-size:1.2rem;margin-top:1rem;">جمع: {{ total }} تومان</p>
+    {% else %}
+    <p style="text-align:center;color:#888;padding:2rem;">سبد خرید شما خالی است.</p>
+    {% endif %}
     <p><a href="/catalog">بازگشت به کاتالوگ</a></p>
 </div>
 </body>

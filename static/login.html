@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ورود | پلتفرم اجاره اقامتگاه</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
@@ -22,12 +22,13 @@
             <h2>ورود</h2>
         </div>
 
-        <form class="register-form" action="#" method="POST">
+        <!-- اصلاح: action به /login و فیلد email به جای login -->
+        <form class="register-form" action="/login" method="POST">
 
             <div class="form-group">
-                <label for="login-identity"> شماره موبایل <span class="required-star">*</span></label>
-                <input type="text" id="login-identity" name="login" class="form-control"
-                       placeholder="ایمیل یا شماره موبایل خود را وارد کنید" required>
+                <label for="email">ایمیل <span class="required-star">*</span></label>
+                <input type="email" id="email" name="email" class="form-control"
+                       placeholder="example@domain.com" required>
             </div>
 
             <div class="form-group">
@@ -48,7 +49,7 @@
             </button>
 
             <div class="login-link">
-                حساب کاربری ندارید؟ <a href="#">ثبت‌نام کنید</a>
+                حساب کاربری ندارید؟ <a href="/register">ثبت‌نام کنید</a>
             </div>
         </form>
     </div>

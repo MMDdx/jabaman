@@ -15,8 +15,16 @@
                 <a href="/">خانه</a>
                 <a href="/catalog">اقامتگاه‌ها</a>
                 <a href="/contact">تماس با ما</a>
+                <!-- اصلاح: نوار ناوبری بر اساس وضعیت ورود -->
+                {% if user_id %}
+                <a href="/cart">🛒 سبد</a>
+                <a href="/wishlist">❤️ علاقه‌مندی</a>
+                <a href="/add-property" class="btn-outline">افزودن اقامتگاه</a>
+                <a href="/logout" class="btn-primary">خروج</a>
+                {% else %}
                 <a href="/register" class="btn-outline">ثبت‌نام</a>
                 <a href="/login" class="btn-primary">ورود</a>
+                {% endif %}
             </nav>
         </div>
     </header>
@@ -27,7 +35,9 @@
             <p>از ویلاهای ساحلی تا کلبه‌های جنگلی، بهترین اقامتگاه‌ها برای سفری خاطره‌انگیز</p>
             <div class="hero-buttons">
                 <a href="/catalog" class="btn-primary btn-lg">مشاهده اقامتگاه‌ها</a>
+                {% if not user_id %}
                 <a href="/register" class="btn-outline btn-lg">میزبان شوید</a>
+                {% endif %}
             </div>
         </div>
     </section>

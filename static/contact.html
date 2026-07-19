@@ -4,28 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تماس با ما | ارتباط با کسب‌وکار</title>
-    <link rel="stylesheet" href="static/style.css">
+    <!-- اصلاح: مسیر CSS مطلق شد -->
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
 <div class="contact-container">
-
 
     <div class="page-header">
         <h1>تماس با ما</h1>
         <p>ما همیشه آماده شنیدن صدای شما هستیم. از طریق راه‌های زیر با ما در ارتباط باشید.</p>
     </div>
 
-
     <div class="contact-row">
-
 
         <div class="info-card">
             <div class="info-header">
                 <i class="fas fa-headset"></i>
                 <h2>اطلاعات تماس</h2>
             </div>
-
 
             <div class="info-item">
                 <i class="fas fa-map-marker-alt"></i>
@@ -34,7 +32,6 @@
                     <div class="item-detail">تهران، خیابان ولیعصر، بالاتر از پارک وی، پلاک ۲۲۸، طبقه ۴</div>
                 </div>
             </div>
-
 
             <div class="info-item">
                 <i class="fas fa-phone-alt"></i>
@@ -60,7 +57,6 @@
                 </div>
             </div>
 
-
             <div class="info-item">
                 <i class="fas fa-globe"></i>
                 <div>
@@ -73,7 +69,6 @@
                     </div>
                 </div>
             </div>
-
 
             <div class="info-item">
                 <i class="far fa-clock"></i>
@@ -90,14 +85,14 @@
             <div class="info-footer-text">پاسخگویی ۲۴ ساعته در روزهای کاری</div>
         </div>
 
-
         <div class="form-card">
             <div class="form-header">
                 <i class="fas fa-paper-plane"></i>
                 <h2>فرم تماس</h2>
             </div>
 
-            <form class="contact-form" action="#" method="POST">
+            <!-- اصلاح: action به /contact و نام فیلدها استاندارد شد -->
+            <form class="contact-form" action="/contact" method="POST">
 
                 <div class="form-group">
                     <label for="fullname">نام و نام خانوادگی <span class="required-star">*</span></label>
@@ -105,27 +100,29 @@
                            placeholder="مثال: علی محمدی" required>
                 </div>
 
-
                 <div class="form-group">
                     <label for="email">آدرس ایمیل <span class="required-star">*</span></label>
                     <input type="email" id="email" name="email" class="form-control"
                            placeholder="example@domain.com" required>
                 </div>
 
+                <div class="form-group">
+                    <label for="phone">شماره تماس (اختیاری)</label>
+                    <input type="tel" id="phone" name="phone" class="form-control"
+                           placeholder="09xxxxxxxxx">
+                </div>
 
                 <div class="form-group">
-                    <label for="subject">موضوع <span class="required-star">*</span></label>
-                    <input type="text" id="subject" name="subject" class="form-control"
+                    <label for="topic">موضوع <span class="required-star">*</span></label>
+                    <input type="text" id="topic" name="topic" class="form-control"
                            placeholder="عنوان پیام خود را بنویسید" required>
                 </div>
 
-
                 <div class="form-group">
-                    <label for="message">متن پیام <span class="required-star">*</span></label>
-                    <textarea id="message" name="message" class="form-control" rows="5"
+                    <label for="message_text">متن پیام <span class="required-star">*</span></label>
+                    <textarea id="message_text" name="message_text" class="form-control" rows="5"
                               placeholder="پیام خود را اینجا بنویسید..." required></textarea>
                 </div>
-
 
                 <button type="submit" class="submit-btn">
                     ارسال پیام <i class="fas fa-chevron-left"></i>
@@ -135,7 +132,6 @@
             </form>
         </div>
     </div>
-
 
     <footer class="contact-footer">
         <p>© ۲۰۲۵ تمام حقوق محفوظ است. نام تجاری شما.</p>

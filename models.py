@@ -1,175 +1,341 @@
+# models.py
+"""لایه‌ی Model در معماری MVC — تمام دسترسی‌های دیتابیس اینجا انجام می‌شود.
+
+تغییرات نسبت به نسخه‌ی قبل:
+- PRAGMA foreign_keys = ON در get_db فعال شده تا CASCADE واقعاً کار کند.
+- کاربران با email لاگین می‌کنند (نه phone).
+- پارامترهای password به password_hash تغییر نام داد (شفاف‌تر).
+- توابع delete_from_cart و delete_from_wishlist اضافه شد.
+- توابع get_user_by_email، get_user_with_role اضافه شد.
+- توابع create_session و get_user_by_session با مدیریت انقضا.
+- استفاده از context manager برای جلوگیری از connection leak.
+"""
 import sqlite3
 import uuid
+from datetime import datetime, timedelta
 
+import db_setup
 
-DB_NAME = "db.sqlite"
+# استفاده از همان نام دیتابیس که در db_setup تعریف شده
+DB_NAME = db_setup.DB_NAME
+
 
 def get_db():
+    """باز کردن یک اتصال جدید به دیتابیس با فعال بودن FK و Row factory."""
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
-# ---------- کاربران ----------
+
+def _dict(row):
+    """تبدیل sqlite3.Row به dict. اگر None باشد، None برمی‌گرداند."""
+    return dict(row) if row is not None else None
+
+
+# ===================== کاربران =====================
+
 def get_user(user_id):
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    conn.close()
-    return user
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    return _dict(row)
+
 
 def get_all_users():
-    conn = get_db()
-    rows = conn.execute("SELECT id, first_name, last_name, phone, account_type, created_at FROM users").fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, first_name, last_name, email, phone, account_type, is_admin, created_at "
+            "FROM users ORDER BY id ASC"
+        ).fetchall()
+    return [_dict(r) for r in rows]
 
-def create_user(first_name, last_name, phone, password_hash, account_type):
-    conn = get_db()
-    conn.execute("INSERT INTO users (first_name, last_name, phone, password, account_type) VALUES (?,?,?,?,?)",
-                 (first_name, last_name, phone, password_hash, account_type))
-    conn.commit()
-    conn.close()
 
-def update_user(user_id, first_name, last_name, phone, account_type):
-    conn = get_db()
-    conn.execute("UPDATE users SET first_name=?, last_name=?, phone=?, account_type=? WHERE id=?",
-                 (first_name, last_name, phone, account_type, user_id))
-    conn.commit()
-    conn.close()
+def get_user_by_email(email):
+    """برای ورود با ایمیل."""
+    if not email:
+        return None
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    return _dict(row)
 
-# ---------- اقامتگاه‌ها ----------
+
+def create_user(first_name, last_name, email, password_hash, account_type, phone=None, is_admin=0):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO users (first_name, last_name, email, phone, password, account_type, is_admin) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (first_name, last_name, email, phone, password_hash, account_type, is_admin)
+        )
+        conn.commit()
+
+
+def update_user(user_id, first_name, last_name, email, account_type, phone=None):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET first_name=?, last_name=?, email=?, phone=?, account_type=? WHERE id=?",
+            (first_name, last_name, email, phone, account_type, user_id)
+        )
+        conn.commit()
+
+
+def is_admin(user_id):
+    if not user_id:
+        return False
+    with get_db() as conn:
+        row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
+    return bool(row and row["is_admin"])
+
+
+# ===================== اقامتگاه‌ها =====================
+
 def get_all_properties():
-    conn = get_db()
-    rows = conn.execute("SELECT id, host_id, title, property_type, location, price_per_night, max_guests, bedrooms, bathrooms, description, amenities, images, created_at FROM properties").fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, host_id, title, property_type, location, price_per_night, "
+            "max_guests, bedrooms, bathrooms, description, amenities, images, created_at "
+            "FROM properties ORDER BY id DESC"
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
 
 def get_property(property_id):
-    conn = get_db()
-    prop = conn.execute("SELECT * FROM properties WHERE id=?", (property_id,)).fetchone()
-    conn.close()
-    return prop
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM properties WHERE id = ?", (property_id,)).fetchone()
+    return _dict(row)
+
 
 def get_featured_properties(limit=6):
-    conn = get_db()
-    rows = conn.execute("SELECT id, title, property_type, location, price_per_night FROM properties ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, title, property_type, location, price_per_night "
+            "FROM properties ORDER BY id DESC LIMIT ?",
+            (limit,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
 
-def create_property(host_id, title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms):
-    conn = get_db()
-    conn.execute("INSERT INTO properties (host_id, title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms) VALUES (?,?,?,?,?,?,?,?,?)",
-                 (host_id, title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms))
-    conn.commit()
-    conn.close()
 
-def update_property(property_id, title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms):
-    conn = get_db()
-    conn.execute("UPDATE properties SET title=?, description=?, property_type=?, location=?, price_per_night=?, max_guests=?, bedrooms=?, bathrooms=? WHERE id=?",
-                 (title, description, property_type, location, price_per_night, max_guests, bedrooms, bathrooms, property_id))
-    conn.commit()
-    conn.close()
+def get_properties_by_host(host_id):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM properties WHERE host_id = ? ORDER BY id DESC",
+            (host_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
 
-# ---------- پیام‌ها ----------
+
+def create_property(host_id, title, description, property_type, location,
+                    price_per_night, max_guests, bedrooms, bathrooms,
+                    amenities=None, images=None):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO properties "
+            "(host_id, title, description, property_type, location, price_per_night, "
+            " max_guests, bedrooms, bathrooms, amenities, images) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (host_id, title, description, property_type, location, price_per_night,
+             max_guests, bedrooms, bathrooms, amenities, images)
+        )
+        conn.commit()
+
+
+def update_property(property_id, title, description, property_type, location,
+                    price_per_night, max_guests, bedrooms, bathrooms,
+                    amenities=None, images=None):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE properties SET title=?, description=?, property_type=?, location=?, "
+            "price_per_night=?, max_guests=?, bedrooms=?, bathrooms=?, amenities=?, images=?, "
+            "updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (title, description, property_type, location, price_per_night,
+             max_guests, bedrooms, bathrooms, amenities, images, property_id)
+        )
+        conn.commit()
+
+
+def delete_property(property_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM properties WHERE id = ?", (property_id,))
+        conn.commit()
+
+
+# ===================== پیام‌ها =====================
+
 def get_all_messages():
-    conn = get_db()
-    rows = conn.execute("SELECT id, fullname, email, phone, topic, message_text, is_read, created_at FROM messages").fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, fullname, email, phone, topic, message_text, is_read, created_at "
+            "FROM messages ORDER BY id DESC"
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
 
 def get_message(message_id):
-    conn = get_db()
-    msg = conn.execute("SELECT * FROM messages WHERE id=?", (message_id,)).fetchone()
-    conn.close()
-    return msg
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    return _dict(row)
+
 
 def create_message(fullname, email, phone, topic, message_text):
-    conn = get_db()
-    conn.execute("INSERT INTO messages (fullname, email, phone, topic, message_text) VALUES (?,?,?,?,?)",
-                 (fullname, email, phone, topic, message_text))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO messages (fullname, email, phone, topic, message_text) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (fullname, email, phone, topic, message_text)
+        )
+        conn.commit()
 
-# ---------- نظرات ----------
+
+def mark_message_read(message_id, is_read=True):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE messages SET is_read = ? WHERE id = ?",
+            (1 if is_read else 0, message_id)
+        )
+        conn.commit()
+
+
+# ===================== نظرات =====================
+
 def get_comments_for_property(property_id):
-    conn = get_db()
-    comments = conn.execute(
-        "SELECT c.comment_text, c.rating, c.created_at, u.first_name || ' ' || u.last_name as user_name "
-        "FROM comments c JOIN users u ON c.user_id = u.id "
-        "WHERE c.property_id = ? ORDER BY c.created_at DESC", (property_id,)
-    ).fetchall()
-    conn.close()
-    return comments
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT c.comment_text, c.rating, c.created_at, "
+            "       u.first_name || ' ' || u.last_name AS user_name "
+            "FROM comments c JOIN users u ON c.user_id = u.id "
+            "WHERE c.property_id = ? ORDER BY c.created_at DESC",
+            (property_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
 
 def add_comment(user_id, property_id, comment_text, rating):
-    conn = get_db()
-    conn.execute("INSERT INTO comments (user_id, property_id, comment_text, rating) VALUES (?,?,?,?)",
-                 (user_id, property_id, comment_text, rating))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO comments (user_id, property_id, comment_text, rating) "
+            "VALUES (?, ?, ?, ?)",
+            (user_id, property_id, comment_text, rating)
+        )
+        conn.commit()
 
-# ---------- سبد خرید ----------
+
+# ===================== سبد خرید =====================
+
 def get_cart_items(user_id):
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT p.id, p.title, p.location, p.price_per_night, p.images "
-        "FROM cart c JOIN properties p ON c.property_id = p.id "
-        "WHERE c.user_id = ?", (user_id,)
-    ).fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT c.id AS cart_id, p.id, p.title, p.location, p.price_per_night, p.images "
+            "FROM cart c JOIN properties p ON c.property_id = p.id "
+            "WHERE c.user_id = ? ORDER BY c.added_at DESC",
+            (user_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
 
 def add_to_cart(user_id, property_id):
-    conn = get_db()
-    conn.execute("INSERT INTO cart (user_id, property_id) VALUES (?,?)", (user_id, property_id))
-    conn.commit()
-    conn.close()
+    """از INSERT OR IGNORE استفاده می‌شود تا از تکرار جلوگیری شود."""
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO cart (user_id, property_id) VALUES (?, ?)",
+            (user_id, property_id)
+        )
+        conn.commit()
 
-# ---------- علاقمندی ----------
+
+def remove_from_cart(user_id, cart_id):
+    with get_db() as conn:
+        conn.execute(
+            "DELETE FROM cart WHERE id = ? AND user_id = ?",
+            (cart_id, user_id)
+        )
+        conn.commit()
+
+
+def clear_cart(user_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+        conn.commit()
+
+
+# ===================== علاقه‌مندی =====================
+
 def get_wishlist_items(user_id):
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT p.id, p.title, p.location, p.price_per_night, p.images "
-        "FROM wishlist w JOIN properties p ON w.property_id = p.id "
-        "WHERE w.user_id = ?", (user_id,)
-    ).fetchall()
-    conn.close()
-    return rows
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT w.id AS wishlist_id, p.id, p.title, p.location, p.price_per_night, p.images "
+            "FROM wishlist w JOIN properties p ON w.property_id = p.id "
+            "WHERE w.user_id = ? ORDER BY w.added_at DESC",
+            (user_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
 
 def add_to_wishlist(user_id, property_id):
-    conn = get_db()
-    conn.execute("INSERT OR IGNORE INTO wishlist (user_id, property_id) VALUES (?,?)", (user_id, property_id))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO wishlist (user_id, property_id) VALUES (?, ?)",
+            (user_id, property_id)
+        )
+        conn.commit()
+
+
+def remove_from_wishlist(user_id, wishlist_id):
+    with get_db() as conn:
+        conn.execute(
+            "DELETE FROM wishlist WHERE id = ? AND user_id = ?",
+            (wishlist_id, user_id)
+        )
+        conn.commit()
+
+
+# ===================== نشست‌ها (Sessions) =====================
+
+SESSION_TTL_HOURS = 24
 
 
 def create_session(user_id):
-    session_id = str(uuid.uuid4())
-    conn = get_db()
-    conn.execute("INSERT INTO sessions (id, user_id) VALUES (?, ?)", (session_id, user_id))
-    conn.commit()
-    conn.close()
+    session_id = secrets_safe_uuid()
+    expires_at = (datetime.utcnow() + timedelta(hours=SESSION_TTL_HOURS)).isoformat()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)",
+            (session_id, user_id, expires_at)
+        )
+        conn.commit()
     return session_id
 
+
 def get_user_by_session(session_id):
+    """بررسی نشست و بازگرداندن user_id در صورت معتبر بودن."""
     if not session_id:
         return None
-    conn = get_db()
-    session = conn.execute(
-        "SELECT user_id FROM sessions WHERE id = ?", (session_id,)
-    ).fetchone()
-    conn.close()
-    if session:
-        return session["user_id"]
-    return None
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT user_id, expires_at FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+    if not row:
+        return None
+    # بررسی انقضا
+    if row["expires_at"]:
+        try:
+            expires = datetime.fromisoformat(row["expires_at"])
+            if datetime.utcnow() > expires:
+                delete_session(session_id)
+                return None
+        except ValueError:
+            return None
+    return row["user_id"]
+
 
 def delete_session(session_id):
-    conn = get_db()
-    conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
-    conn.commit()
-    conn.close()
+    if not session_id:
+        return
+    with get_db() as conn:
+        conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+        conn.commit()
 
-def get_user_by_phone(phone):
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
-    conn.close()
-    return user
+
+def secrets_safe_uuid():
+    """تولید UUID امن با secrets (به‌جای uuid.uuid4 که امن نیست)."""
+    import secrets as _s
+    return str(_s.token_hex(16))

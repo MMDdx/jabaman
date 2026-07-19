@@ -27,9 +27,14 @@
                     <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}" required>
                 </div>
             </div>
+            <!-- اصلاح: فیلد email جایگزین phone شد -->
             <div class="form-group">
-                <label>شماره موبایل <span class="required-star">*</span></label>
-                <input type="tel" name="phone" class="form-control" value="{{ user.phone }}" required pattern="[0-9]{10,11}">
+                <label>ایمیل <span class="required-star">*</span></label>
+                <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+            </div>
+            <div class="form-group">
+                <label>شماره موبایل (اختیاری)</label>
+                <input type="tel" name="phone" class="form-control" value="{{ user.phone }}">
             </div>
             <div class="form-group">
                 <label>نوع حساب <span class="required-star">*</span></label>
