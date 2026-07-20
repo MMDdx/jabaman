@@ -12,6 +12,7 @@
 - اعتبارسنجی ایمیل و رمز عبور قوی‌تر.
 - توابع حذف از cart/wishlist اضافه شد.
 """
+import json
 import urllib.parse
 import re
 import sqlite3
@@ -24,6 +25,7 @@ from views import (
     generate_edit_user_form, generate_edit_property_form,
     generate_error_page, generate_property_detail,
     generate_cart_page, generate_wishlist_page, generate_message_detail,
+    generate_login_redirect_page,
 )
 
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
@@ -34,6 +36,17 @@ class Response:
     @staticmethod
     def html(status, body, headers=None):
         return (status, "text/html; charset=utf-8", body, headers or [])
+
+    @staticmethod
+    def json(status, payload, headers=None):
+        """ساخت پاسخ JSON.
+
+        payload یک dict است که به JSON تبدیل می‌شود.
+        کاربرد اصلی: پاسخ به درخواست‌های fetch از فرم‌های login/signup.
+        """
+        h = list(headers or [])
+        body = json.dumps(payload, ensure_ascii=False)
+        return (status, "application/json; charset=utf-8", body, h)
 
     @staticmethod
     def redirect(location, headers=None):
@@ -48,6 +61,20 @@ class Response:
     @staticmethod
     def forbidden():
         return Response.html(403, generate_error_page(403))
+
+
+def _wants_json(headers):
+    """تشخیص اینکه آیا کلاینت JSON می‌خواهد (درخواست fetch/XHR).
+
+    معیارها:
+    - هدر Accept شامل 'application/json' باشد، یا
+    - هدر X-Requested-With برابر 'XMLHttpRequest' باشد.
+    """
+    if headers is None:
+        return False
+    accept = (headers.get("Accept") or "").lower()
+    xrw = (headers.get("X-Requested-With") or "").lower()
+    return "application/json" in accept or xrw == "xmlhttprequest"
 
 
 def match_route(path, pattern):
@@ -212,22 +239,23 @@ def process_get(path, user_id=None):
 # ========================
 #         POST
 # ========================
-def process_post(path, body, user_id=None):
+def process_post(path, body, user_id=None, headers=None):
     path = path.split('?')[0]
     params = urllib.parse.parse_qs(body.decode()) if body else {}
+    wants_json = _wants_json(headers)
 
     if path == "/contact":
-        return handle_contact(params)
+        return handle_contact(params, wants_json=wants_json)
     if path == "/register":
-        return handle_register(params)
+        return handle_register(params, wants_json=wants_json)
     if path == "/login":
-        return handle_login(params)
+        return handle_login(params, wants_json=wants_json)
     if path == "/logout":
         return handle_logout_post(user_id)
     if path == "/add-property":
         if not _require_login(user_id):
             return Response.login_required()
-        return handle_add_property(params, user_id)
+        return handle_add_property(params, user_id, wants_json=wants_json)
     if path == "/cart/add":
         if not _require_login(user_id):
             return Response.login_required()
@@ -258,7 +286,7 @@ def process_post(path, body, user_id=None):
 
 # ======================== handler functions ========================
 
-def handle_contact(params):
+def handle_contact(params, wants_json=False):
     fullname = params.get('fullname', [''])[0].strip()
     email = params.get('email', [''])[0].strip()
     phone = params.get('phone', [''])[0].strip()
@@ -266,18 +294,28 @@ def handle_contact(params):
     message_text = params.get('message_text', [''])[0].strip()
 
     if not fullname or not message_text:
-        return Response.html(400, "نام و متن پیام الزامی است. <a href='/contact'>بازگشت</a>")
+        msg = "نام و متن پیام الزامی است."
+        if wants_json:
+            return Response.json(400, {"success": False, "error": msg})
+        return Response.html(400, msg + " <a href='/contact'>بازگشت</a>")
     if email and not EMAIL_REGEX.match(email):
-        return Response.html(400, "ایمیل نامعتبر است. <a href='/contact'>بازگشت</a>")
+        msg = "ایمیل نامعتبر است."
+        if wants_json:
+            return Response.json(400, {"success": False, "error": msg})
+        return Response.html(400, msg + " <a href='/contact'>بازگشت</a>")
 
     try:
         models.create_message(fullname, email, phone, topic, message_text)
+        if wants_json:
+            return Response.json(200, {"success": True, "message": "پیام با موفقیت ثبت شد."})
         return Response.html(200, "پیام با موفقیت ثبت شد. <a href='/'>بازگشت به خانه</a>")
     except Exception as e:
+        if wants_json:
+            return Response.json(500, {"success": False, "error": str(e)})
         return Response.html(500, generate_error_page(500, str(e)))
 
 
-def handle_register(params):
+def handle_register(params, wants_json=False):
     first_name = params.get('first_name', [''])[0].strip()
     last_name = params.get('last_name', [''])[0].strip()
     email = params.get('email', [''])[0].strip()
@@ -286,16 +324,21 @@ def handle_register(params):
     confirm_password = params.get('confirm_password', [''])[0]
     account_type = params.get('account_type', [''])[0]
 
+    def fail(msg, status=400):
+        if wants_json:
+            return Response.json(status, {"success": False, "error": msg})
+        return Response.html(status, msg + " <a href='/register'>بازگشت</a>")
+
     if not all([first_name, last_name, email, password, confirm_password, account_type]):
-        return Response.html(400, "فیلدهای الزامی را پر کنید. <a href='/register'>بازگشت</a>")
+        return fail("فیلدهای الزامی را پر کنید.")
     if not EMAIL_REGEX.match(email):
-        return Response.html(400, "ایمیل نامعتبر است. <a href='/register'>بازگشت</a>")
+        return fail("ایمیل نامعتبر است.")
     if password != confirm_password:
-        return Response.html(400, "رمز عبور و تکرار آن مطابقت ندارند. <a href='/register'>بازگشت</a>")
+        return fail("رمز عبور و تکرار آن مطابقت ندارند.")
     if len(password) < 8:
-        return Response.html(400, "رمز عبور باید حداقل ۸ کاراکتر باشد. <a href='/register'>بازگشت</a>")
+        return fail("رمز عبور باید حداقل ۸ کاراکتر باشد.")
     if account_type not in ('guest', 'host'):
-        return Response.html(400, "نوع حساب نامعتبر است. <a href='/register'>بازگشت</a>")
+        return fail("نوع حساب نامعتبر است.")
 
     try:
         models.create_user(
@@ -303,23 +346,37 @@ def handle_register(params):
             hash_password(password), account_type,
             phone=phone or None
         )
+        if wants_json:
+            return Response.json(200, {
+                "success": True,
+                "redirect": "/login",
+                "message": "ثبت‌نام با موفقیت انجام شد."
+            })
         return Response.html(200, "ثبت‌نام با موفقیت انجام شد. <a href='/login'>ورود</a>")
     except sqlite3.IntegrityError:
-        return Response.html(400, "این ایمیل قبلاً ثبت شده است. <a href='/login'>ورود</a>")
+        return fail("این ایمیل قبلاً ثبت شده است.")
     except Exception as e:
+        if wants_json:
+            return Response.json(500, {"success": False, "error": str(e)})
         return Response.html(500, generate_error_page(500, str(e)))
 
 
-def handle_login(params):
+def handle_login(params, wants_json=False):
     email = params.get('email', [''])[0].strip()
     password = params.get('password', [''])[0]
 
+    def fail(msg, status=400):
+        if wants_json:
+            return Response.json(status, {"success": False, "error": msg})
+        return Response.html(status, msg + " <a href='/login'>بازگشت</a>")
+
     if not email or not password:
-        return Response.html(400, "ایمیل و رمز عبور الزامی است. <a href='/login'>بازگشت</a>")
+        return fail("ایمیل و رمز عبور الزامی است.")
 
     user = models.get_user_by_email(email)
     if not user or not verify_password(password, user["password"]):
-        return Response.html(401, "اطلاعات وارد شده نادرست است. <a href='/login'>تلاش مجدد</a>")
+        # نکته امنیتی: پیام کلی می‌دهیم تا attacker نفهمد ایمیل وجود دارد یا نه.
+        return fail("ایمیل یا رمز عبور نادرست است.", status=401)
 
     session_id = models.create_session(user["id"])
 
@@ -332,6 +389,13 @@ def handle_login(params):
     cookie["session_id"]["max-age"] = 3600 * 24  # یک روز
 
     headers = [("Set-Cookie", cookie["session_id"].OutputString())]
+
+    if wants_json:
+        # برای fetch: JSON با موفقیت + redirect
+        return Response.json(200, {
+            "success": True,
+            "redirect": "/"
+        }, headers)
     return Response.redirect("/", headers)
 
 
@@ -368,7 +432,7 @@ def handle_logout_post(user_id):
     return Response.html(200, body, headers)
 
 
-def handle_add_property(params, user_id):
+def handle_add_property(params, user_id, wants_json=False):
     """host_id از نشست گرفته می‌شود، نه از فرم."""
     title = params.get('title', [''])[0].strip()
     description = params.get('description', [''])[0].strip()
@@ -380,8 +444,13 @@ def handle_add_property(params, user_id):
     bathrooms = params.get('bathrooms', ['0'])[0]
     amenities_list = params.get('amenities', [])
 
+    def fail(msg, status=400):
+        if wants_json:
+            return Response.json(status, {"success": False, "error": msg})
+        return Response.html(status, msg + " <a href='/add-property'>بازگشت</a>")
+
     if not all([title, property_type, location, price_per_night, max_guests]):
-        return Response.html(400, "فیلدهای الزامی را پر کنید. <a href='/add-property'>بازگشت</a>")
+        return fail("فیلدهای الزامی را پر کنید.")
 
     try:
         # جمع‌آوری امکانات به‌صورت لیست کاما جدا
@@ -394,10 +463,14 @@ def handle_add_property(params, user_id):
             int(bedrooms), int(bathrooms),
             amenities=amenities
         )
+        if wants_json:
+            return Response.json(200, {"success": True, "redirect": "/catalog"})
         return Response.redirect("/catalog")
     except ValueError as e:
-        return Response.html(400, f"ورودی نامعتبر: {e}. <a href='/add-property'>بازگشت</a>")
+        return fail(f"ورودی نامعتبر: {e}")
     except Exception as e:
+        if wants_json:
+            return Response.json(500, {"success": False, "error": str(e)})
         return Response.html(500, generate_error_page(500, str(e)))
 
 

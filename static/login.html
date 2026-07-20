@@ -22,19 +22,24 @@
             <h2>ورود</h2>
         </div>
 
-        <!-- اصلاح: action به /login و فیلد email به جای login -->
-        <form class="register-form" action="/login" method="POST">
+        <!-- باکس پیام خطا/موفقیت — به‌صورت پیش‌فرض مخفی است -->
+        <div id="form-message" class="form-message" role="alert" aria-live="polite" style="display:none;"></div>
+
+        <!-- فرم با action و method کلاسیک (به‌عنوان fallback اگر JS خاموش بود) -->
+        <form class="register-form" id="login-form" action="/login" method="POST">
 
             <div class="form-group">
                 <label for="email">ایمیل <span class="required-star">*</span></label>
                 <input type="email" id="email" name="email" class="form-control"
-                       placeholder="example@domain.com" required>
+                       placeholder="example@domain.com" required
+                       autocomplete="email">
             </div>
 
             <div class="form-group">
                 <label for="login-password">رمز عبور <span class="required-star">*</span></label>
                 <input type="password" id="login-password" name="password" class="form-control"
-                       placeholder="رمز عبور" required>
+                       placeholder="رمز عبور" required
+                       autocomplete="current-password">
             </div>
 
             <div class="form-group">
@@ -44,8 +49,9 @@
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn">
-                ورود <i class="fas fa-chevron-left"></i>
+            <button type="submit" class="submit-btn" id="submit-btn">
+                <span id="btn-text">ورود</span>
+                <i class="fas fa-chevron-left"></i>
             </button>
 
             <div class="login-link">
@@ -58,6 +64,91 @@
         © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
     </div>
 </div>
+
+<script>
+(function () {
+    "use strict";
+
+    var form = document.getElementById("login-form");
+    var msgBox = document.getElementById("form-message");
+    var btn = document.getElementById("submit-btn");
+    var btnText = document.getElementById("btn-text");
+
+    function showMessage(text, type) {
+        // type: "error" | "success" | "info"
+        msgBox.textContent = text;
+        msgBox.className = "form-message " + (type || "error");
+        msgBox.style.display = "block";
+        // اسکرول به بالای فرم برای دیدن پیام
+        msgBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function hideMessage() {
+        msgBox.style.display = "none";
+        msgBox.textContent = "";
+    }
+
+    function setLoading(isLoading) {
+        if (isLoading) {
+            btn.disabled = true;
+            btnText.textContent = "در حال ورود...";
+        } else {
+            btn.disabled = false;
+            btnText.textContent = "ورود";
+        }
+    }
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        hideMessage();
+
+        var formData = new FormData(form);
+
+        // اعتبارسنجی سمت کلاینت (به‌عنوان بهینه‌سازی، قبل از ارسال به سرور)
+        var email = (formData.get("email") || "").trim();
+        var password = formData.get("password") || "";
+        if (!email || !password) {
+            showMessage("ایمیل و رمز عبور الزامی است.", "error");
+            return;
+        }
+
+        setLoading(true);
+
+        fetch("/login", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            credentials: "same-origin"
+        })
+        .then(function (resp) {
+            // حتی در پاسخ خطای 401 هم JSON برمی‌گردد
+            return resp.json().then(function (data) {
+                return { status: resp.status, data: data };
+            });
+        })
+        .then(function (result) {
+            var data = result.data || {};
+            if (data.success) {
+                showMessage("ورود موفقیت‌آمیز بود. در حال انتقال...", "success");
+                var target = data.redirect || "/";
+                setTimeout(function () {
+                    window.location.href = target;
+                }, 400);
+            } else {
+                showMessage(data.error || "خطای ناشناخته رخ داد.", "error");
+                setLoading(false);
+            }
+        })
+        .catch(function (err) {
+            showMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.", "error");
+            setLoading(false);
+        });
+    });
+})();
+</script>
 
 </body>
 </html>

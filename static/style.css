@@ -1,3 +1,9 @@
+/* ===========================
+   style.css - پلتفرم اجاره اقامتگاه
+   شامل استایل صفحات: تماس با ما، ثبت‌نام، درج اقامتگاه
+   =========================== */
+
+/* ----- ریست و پایه ----- */
 * {
     margin: 0;
     padding: 0;
@@ -843,4 +849,69 @@ input[type="file"] {
 .btn-outline:hover {
   background: #0d6efd;
   color: white;
+}
+
+/* ========== باکس پیام فرم (خطا/موفقیت) ========== */
+.form-message {
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  animation: shake 0.4s ease-in-out;
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+
+.form-message::before {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.form-message.error {
+  background: #fde8e8;
+  color: #b91c1c;
+  border-color: #f8c8c8;
+}
+.form-message.error::before {
+  content: "\f06a"; /* fa-exclamation-circle */
+}
+
+.form-message.success {
+  background: #e7f7ec;
+  color: #15803d;
+  border-color: #b8e6c5;
+  animation: none;
+}
+.form-message.success::before {
+  content: "\f00c"; /* fa-check */
+}
+
+.form-message.info {
+  background: #e8f1fd;
+  color: #1d4ed8;
+  border-color: #b9d4f7;
+  animation: none;
+}
+.form-message.info::before {
+  content: "\f05a"; /* fa-info-circle */
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* دکمه در حالت loading */
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

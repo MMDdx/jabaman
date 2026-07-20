@@ -22,8 +22,11 @@
             <h2>فرم ثبت‌نام</h2>
         </div>
 
-        <!-- اصلاح: action به /register -->
-        <form class="register-form" action="/register" method="POST">
+        <!-- باکس پیام خطا/موفقیت — به‌صورت پیش‌فرض مخفی است -->
+        <div id="form-message" class="form-message" role="alert" aria-live="polite" style="display:none;"></div>
+
+        <!-- فرم با action کلاسیک (fallback اگر JS خاموش بود) -->
+        <form class="register-form" id="signup-form" action="/register" method="POST">
 
             <div class="form-row">
                 <div class="form-group">
@@ -38,11 +41,11 @@
                 </div>
             </div>
 
-            <!-- اصلاح: فیلد email اضافه شد (به جای phone) -->
             <div class="form-group">
                 <label for="email">ایمیل <span class="required-star">*</span></label>
                 <input type="email" id="email" name="email" class="form-control"
-                       placeholder="example@domain.com" required>
+                       placeholder="example@domain.com" required
+                       autocomplete="email">
             </div>
 
             <div class="form-group">
@@ -56,12 +59,14 @@
                 <div class="form-group">
                     <label for="password">رمز عبور <span class="required-star">*</span></label>
                     <input type="password" id="password" name="password" class="form-control"
-                           placeholder="حداقل ۸ کاراکتر" required minlength="8">
+                           placeholder="حداقل ۸ کاراکتر" required minlength="8"
+                           autocomplete="new-password">
                 </div>
                 <div class="form-group">
                     <label for="confirm-password">تکرار رمز عبور <span class="required-star">*</span></label>
                     <input type="password" id="confirm-password" name="confirm_password" class="form-control"
-                           placeholder="تکرار رمز عبور" required minlength="8">
+                           placeholder="تکرار رمز عبور" required minlength="8"
+                           autocomplete="new-password">
                 </div>
             </div>
 
@@ -74,8 +79,9 @@
                 </select>
             </div>
 
-            <button type="submit" class="submit-btn">
-                ایجاد حساب کاربری <i class="fas fa-chevron-left"></i>
+            <button type="submit" class="submit-btn" id="submit-btn">
+                <span id="btn-text">ایجاد حساب کاربری</span>
+                <i class="fas fa-chevron-left"></i>
             </button>
 
             <div class="login-link">
@@ -88,6 +94,107 @@
         © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
     </div>
 </div>
+
+<script>
+(function () {
+    "use strict";
+
+    var form = document.getElementById("signup-form");
+    var msgBox = document.getElementById("form-message");
+    var btn = document.getElementById("submit-btn");
+    var btnText = document.getElementById("btn-text");
+
+    function showMessage(text, type) {
+        msgBox.textContent = text;
+        msgBox.className = "form-message " + (type || "error");
+        msgBox.style.display = "block";
+        msgBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function hideMessage() {
+        msgBox.style.display = "none";
+        msgBox.textContent = "";
+    }
+
+    function setLoading(isLoading) {
+        if (isLoading) {
+            btn.disabled = true;
+            btnText.textContent = "در حال ثبت‌نام...";
+        } else {
+            btn.disabled = false;
+            btnText.textContent = "ایجاد حساب کاربری";
+        }
+    }
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        hideMessage();
+
+        var formData = new FormData(form);
+
+        // اعتبارسنجی سمت کلاینت
+        var email = (formData.get("email") || "").trim();
+        var password = formData.get("password") || "";
+        var confirm = formData.get("confirm_password") || "";
+        var accountType = formData.get("account_type") || "";
+
+        if (!formData.get("first_name") || !formData.get("last_name")) {
+            showMessage("نام و نام خانوادگی الزامی است.", "error");
+            return;
+        }
+        if (!email) {
+            showMessage("ایمیل الزامی است.", "error");
+            return;
+        }
+        if (password.length < 8) {
+            showMessage("رمز عبور باید حداقل ۸ کاراکتر باشد.", "error");
+            return;
+        }
+        if (password !== confirm) {
+            showMessage("رمز عبور و تکرار آن مطابقت ندارند.", "error");
+            return;
+        }
+        if (!accountType) {
+            showMessage("نوع حساب کاربری را انتخاب کنید.", "error");
+            return;
+        }
+
+        setLoading(true);
+
+        fetch("/register", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            credentials: "same-origin"
+        })
+        .then(function (resp) {
+            return resp.json().then(function (data) {
+                return { status: resp.status, data: data };
+            });
+        })
+        .then(function (result) {
+            var data = result.data || {};
+            if (data.success) {
+                showMessage("ثبت‌نام با موفقیت انجام شد. در حال انتقال به صفحه ورود...", "success");
+                var target = data.redirect || "/login";
+                setTimeout(function () {
+                    window.location.href = target;
+                }, 800);
+            } else {
+                showMessage(data.error || "خطای ناشناخته رخ داد.", "error");
+                setLoading(false);
+            }
+        })
+        .catch(function (err) {
+            showMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.", "error");
+            setLoading(false);
+        });
+    });
+})();
+</script>
 
 </body>
 </html>
