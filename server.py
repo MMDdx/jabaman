@@ -48,7 +48,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 with open(file_path, "rb") as f:
                     body = f.read()
-                self._send((200, "text/html; charset=utf-8", body, []))
+                # HTML ها را no-cache کنیم تا تغییرات JS سریعاً اعمال شوند
+                self._send((200, "text/html; charset=utf-8", body, [
+                    ("Cache-Control", "no-cache, must-revalidate")
+                ]))
             else:
                 self._send_error(404)
             return
@@ -60,7 +63,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 content_type = self._guess_content_type(file_path)
                 with open(file_path, "rb") as f:
                     body = f.read()
-                self._send((200, content_type, body, []))
+                # CSS/JS هم no-cache تا تغییرات سریع دیده شوند
+                self._send((200, content_type, body, [
+                    ("Cache-Control", "no-cache, must-revalidate")
+                ]))
             else:
                 self._send_error(404)
             return

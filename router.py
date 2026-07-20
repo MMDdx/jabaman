@@ -30,6 +30,97 @@ from views import (
 
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
+
+def _parse_form_body(body, content_type=None):
+    """تجزیه‌ی بدنه‌ی POST با پشتیبانی از هر دو فرمت:
+
+    1. application/x-www-form-urlencoded  (پیش‌فرض HTML forms)
+    2. multipart/form-data  (FormData در fetch)
+
+    خروجی: dict شبیه parse_qs با مقادیر لیست.
+    """
+    if not body:
+        return {}
+
+    if isinstance(body, bytes):
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            return {}
+    else:
+        text = body
+
+    # اگر multipart است
+    if (content_type and "multipart/form-data" in content_type.lower()) or \
+       (not content_type and "------" in text[:200] and "Content-Disposition" in text[:500]):
+        return _parse_multipart(body, content_type)
+
+    # در غیر این صورت URL-encoded
+    return urllib.parse.parse_qs(text)
+
+
+def _parse_multipart(body, content_type):
+    """پارسر ساده‌ی multipart/form-data (بدون کتابخانه خارجی)."""
+    if isinstance(body, str):
+        body = body.encode("utf-8")
+
+    # پیدا کردن boundary از content_type یا از بدنه
+    boundary = None
+    if content_type:
+        m = re.search(r'boundary=("?)([^";]+)\1', content_type)
+        if m:
+            boundary = m.group(2)
+
+    if not boundary:
+        # تلاش برای استخراج از بدنه
+        m = re.match(rb'--([^\r\n]+)', body)
+        if m:
+            boundary = m.group(1).decode("utf-8", errors="ignore")
+
+    if not boundary:
+        return {}
+
+    boundary_bytes = ("--" + boundary).encode("utf-8")
+    parts = body.split(boundary_bytes)
+    result = {}
+
+    for part in parts:
+        # حذف -- در پایان و \r\n در ابتدا/انتها
+        if not part or part in (b"--\r\n", b"--", b"\r\n", b"\r\n--\r\n"):
+            continue
+        # حذف \r\n ابتدایی
+        part = part.lstrip(b"\r\n")
+        # حذف \r\n انتهایی
+        if part.endswith(b"\r\n"):
+            part = part[:-2]
+        # پایان مارکر
+        if part == b"--" or part.endswith(b"--"):
+            continue
+
+        # جداکردن headers و content با \r\n\r\n
+        if b"\r\n\r\n" not in part:
+            continue
+        header_blob, value = part.split(b"\r\n\r\n", 1)
+
+        # استخراج name از Content-Disposition
+        m = re.search(rb'name="([^"]+)"', header_blob)
+        if not m:
+            continue
+        name = m.group(1).decode("utf-8", errors="ignore")
+
+        # اگر filename داشت (فایل آپلودی) → رد می‌کنیم
+        if b"filename=" in header_blob:
+            continue
+
+        try:
+            value_str = value.decode("utf-8")
+        except UnicodeDecodeError:
+            value_str = value.decode("latin-1")
+
+        result.setdefault(name, []).append(value_str)
+
+    return result
+
 # کلاس کمک‌کننده برای ساخت پاسخ با هدرهای اضافی
 class Response:
     """ساخت پاسخ با هدرهای اضافی (Set-Cookie, Location, ...)."""
@@ -241,7 +332,8 @@ def process_get(path, user_id=None):
 # ========================
 def process_post(path, body, user_id=None, headers=None):
     path = path.split('?')[0]
-    params = urllib.parse.parse_qs(body.decode()) if body else {}
+    content_type = headers.get("Content-Type") if headers else None
+    params = _parse_form_body(body, content_type)
     wants_json = _wants_json(headers)
 
     if path == "/contact":

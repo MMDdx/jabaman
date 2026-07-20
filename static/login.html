@@ -22,11 +22,23 @@
             <h2>ورود</h2>
         </div>
 
-        <!-- باکس پیام خطا/موفقیت — به‌صورت پیش‌فرض مخفی است -->
+        <!-- باکس پیام خطا/موفقیت — توسط auth.js پر می‌شود -->
         <div id="form-message" class="form-message" role="alert" aria-live="polite" style="display:none;"></div>
 
-        <!-- فرم با action و method کلاسیک (به‌عنوان fallback اگر JS خاموش بود) -->
-        <form class="register-form" id="login-form" action="/login" method="POST">
+        <!--
+          ویژگی data-ajax-form باعث می‌شود auth.js این فرم را هندل کند.
+          data-loading-text  : متن دکمه هنگام ارسال
+          data-success-message : پیام موفقیت قبل از ریدایرکت
+          data-success-redirect : مسیر ریدایرکت (در صورت موفقیت؛ سرور هم می‌تواند برگرداند)
+        -->
+        <form class="register-form"
+              id="login-form"
+              action="/login"
+              method="POST"
+              data-ajax-form
+              data-loading-text="در حال ورود..."
+              data-success-message="ورود موفقیت‌آمیز بود. در حال انتقال..."
+              data-success-redirect="/">
 
             <div class="form-group">
                 <label for="email">ایمیل <span class="required-star">*</span></label>
@@ -49,8 +61,8 @@
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn" id="submit-btn">
-                <span id="btn-text">ورود</span>
+            <button type="submit" class="submit-btn">
+                <span>ورود</span>
                 <i class="fas fa-chevron-left"></i>
             </button>
 
@@ -65,90 +77,8 @@
     </div>
 </div>
 
-<script>
-(function () {
-    "use strict";
-
-    var form = document.getElementById("login-form");
-    var msgBox = document.getElementById("form-message");
-    var btn = document.getElementById("submit-btn");
-    var btnText = document.getElementById("btn-text");
-
-    function showMessage(text, type) {
-        // type: "error" | "success" | "info"
-        msgBox.textContent = text;
-        msgBox.className = "form-message " + (type || "error");
-        msgBox.style.display = "block";
-        // اسکرول به بالای فرم برای دیدن پیام
-        msgBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-
-    function hideMessage() {
-        msgBox.style.display = "none";
-        msgBox.textContent = "";
-    }
-
-    function setLoading(isLoading) {
-        if (isLoading) {
-            btn.disabled = true;
-            btnText.textContent = "در حال ورود...";
-        } else {
-            btn.disabled = false;
-            btnText.textContent = "ورود";
-        }
-    }
-
-    form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        hideMessage();
-
-        var formData = new FormData(form);
-
-        // اعتبارسنجی سمت کلاینت (به‌عنوان بهینه‌سازی، قبل از ارسال به سرور)
-        var email = (formData.get("email") || "").trim();
-        var password = formData.get("password") || "";
-        if (!email || !password) {
-            showMessage("ایمیل و رمز عبور الزامی است.", "error");
-            return;
-        }
-
-        setLoading(true);
-
-        fetch("/login", {
-            method: "POST",
-            body: formData,
-            headers: {
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            credentials: "same-origin"
-        })
-        .then(function (resp) {
-            // حتی در پاسخ خطای 401 هم JSON برمی‌گردد
-            return resp.json().then(function (data) {
-                return { status: resp.status, data: data };
-            });
-        })
-        .then(function (result) {
-            var data = result.data || {};
-            if (data.success) {
-                showMessage("ورود موفقیت‌آمیز بود. در حال انتقال...", "success");
-                var target = data.redirect || "/";
-                setTimeout(function () {
-                    window.location.href = target;
-                }, 400);
-            } else {
-                showMessage(data.error || "خطای ناشناخته رخ داد.", "error");
-                setLoading(false);
-            }
-        })
-        .catch(function (err) {
-            showMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.", "error");
-            setLoading(false);
-        });
-    });
-})();
-</script>
+<!-- اسکریپت مشترک فرم‌های ورود/ثبت‌نام -->
+<script src="/static/js/auth.js"></script>
 
 </body>
 </html>
