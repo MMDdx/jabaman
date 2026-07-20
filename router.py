@@ -1,16 +1,13 @@
 # router.py
 """لایه‌ی Controller در معماری MVC — نگاشت مسیرها به توابع هندلر.
 
-تغییرات نسبت به نسخه‌ی قبل:
-- حذف CURRENT_USER_ID = 1 هاردکد شده؛ همه‌چیز از نشست user_id استفاده می‌کند.
-- ورود با ایمیل (نه phone).
-- مسیرهای /admin فقط برای کاربران is_admin=1 قابل دسترس هستند.
-- مسیرهای /cart, /wishlist, /add-property نیاز به ورود دارند.
-- host_id از نشست گرفته می‌شود، نه از فرم (امنیت).
-- ریدایرکت‌های واقعی با هدر Location به‌جای meta refresh.
-- لاگ‌اوت واقعی با پاک‌کردن نشست و کوکی.
-- اعتبارسنجی ایمیل و رمز عبور قوی‌تر.
-- توابع حذف از cart/wishlist اضافه شد.
+تغییرات نسخه‌ی فعلی:
+- صفحات contact / login / signup / add-property از static به templates منتقل شدند
+  و حالا از طریق router سرو می‌شوند تا user_id به آن‌ها پاس شود.
+  به‌این‌ترتیب navbar در همه‌ی صفحات یکپارچه است و وضعیت ورود کاربر را نشان می‌دهد.
+- توابع views.py همگی user_id می‌گیرند.
+- logout از یک قالب با JS خارجی (logout.js) استفاده می‌کند به‌جای inline script.
+- login_redirect هم از قالب با JS خارجی (login_redirect.js) استفاده می‌کند.
 """
 import json
 import urllib.parse
@@ -26,6 +23,8 @@ from views import (
     generate_error_page, generate_property_detail,
     generate_cart_page, generate_wishlist_page, generate_message_detail,
     generate_login_redirect_page,
+    generate_contact_page, generate_login_page, generate_signup_page,
+    generate_add_property_page, generate_logout_page,
 )
 
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
@@ -147,11 +146,11 @@ class Response:
 
     @staticmethod
     def login_required():
-        return Response.redirect("/login")
+        return Response.html(200, generate_login_redirect_page())
 
     @staticmethod
-    def forbidden():
-        return Response.html(403, generate_error_page(403))
+    def forbidden(user_id=None):
+        return Response.html(403, generate_error_page(403, user_id=user_id))
 
 
 def _wants_json(headers):
@@ -221,7 +220,23 @@ def process_get(path, user_id=None):
     # ---------- کاتالوگ ----------
     if path == "/catalog":
         properties = models.get_all_properties()
-        return Response.html(200, generate_catalog_html("کاتالوگ اقامتگاه‌ها", properties))
+        return Response.html(200, generate_catalog_html("کاتالوگ اقامتگاه‌ها", properties, user_id))
+
+    # ---------- صفحات فرم عمومی (حالا از طریق router سرو می‌شوند) ----------
+    if path == "/contact":
+        return Response.html(200, generate_contact_page(user_id))
+
+    if path == "/login":
+        return Response.html(200, generate_login_page(user_id))
+
+    if path == "/register":
+        return Response.html(200, generate_signup_page(user_id))
+
+    if path == "/add-property":
+        # در صورت عدم ورود، صفحه‌ی ریدایرکت لاگین نمایش بده
+        if not _require_login(user_id):
+            return Response.login_required()
+        return Response.html(200, generate_add_property_page(user_id))
 
     # ---------- ورود / ثبت‌نام / خروج ----------
     if path == "/logout":
@@ -232,43 +247,43 @@ def process_get(path, user_id=None):
         if not _require_login(user_id):
             return Response.login_required()
         items = models.get_cart_items(user_id)
-        return Response.html(200, generate_cart_page(items))
+        return Response.html(200, generate_cart_page(items, user_id))
 
     if path == "/wishlist":
         if not _require_login(user_id):
             return Response.login_required()
         items = models.get_wishlist_items(user_id)
-        return Response.html(200, generate_wishlist_page(items))
+        return Response.html(200, generate_wishlist_page(items, user_id))
 
     # ---------- مسیرهای ادمین ----------
     if path == "/admin/users":
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         users = models.get_all_users()
         return Response.html(200, generate_table_html(
             "کاربران",
             ["شناسه", "نام", "نام خانوادگی", "ایمیل", "موبایل", "نوع حساب", "ادمین", "تاریخ ثبت‌نام"],
-            users
+            users, user_id
         ))
 
     if path == "/admin/messages":
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         messages = models.get_all_messages()
         return Response.html(200, generate_table_html(
             "پیام‌ها",
             ["شناسه", "فرستنده", "ایمیل", "تلفن", "موضوع", "متن", "خوانده‌شده", "تاریخ"],
-            messages
+            messages, user_id
         ))
 
     if path == "/admin/properties":
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         properties = models.get_all_properties()
         return Response.html(200, generate_table_html(
             "اقامتگاه‌ها",
             ["شناسه", "میزبان", "عنوان", "نوع", "موقعیت", "قیمت/شب", "ظرفیت", "اتاق", "سرویس", "تاریخ ثبت"],
-            properties
+            properties, user_id
         ))
 
     # ---------- مسیرهای داینامیک ----------
@@ -276,38 +291,38 @@ def process_get(path, user_id=None):
     if params:
         prop = models.get_property(params['id'])
         if not prop:
-            return Response.html(404, generate_error_page(404))
+            return Response.html(404, generate_error_page(404, user_id=user_id))
         comments = models.get_comments_for_property(params['id'])
         return Response.html(200, generate_property_detail(prop, comments, user_id))
 
     params = match_route(path, "/message/<int:id>")
     if params:
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         msg = models.get_message(params['id'])
         if not msg:
-            return Response.html(404, generate_error_page(404))
+            return Response.html(404, generate_error_page(404, user_id=user_id))
         # علامت‌گذاری به‌عنوان خوانده‌شده
         models.mark_message_read(params['id'])
-        return Response.html(200, generate_message_detail(msg))
+        return Response.html(200, generate_message_detail(msg, user_id))
 
     params = match_route(path, "/admin/users/<int:id>/edit")
     if params:
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         user = models.get_user(params['id'])
         if not user:
-            return Response.html(404, generate_error_page(404))
-        return Response.html(200, generate_edit_user_form(user))
+            return Response.html(404, generate_error_page(404, user_id=user_id))
+        return Response.html(200, generate_edit_user_form(user, user_id))
 
     params = match_route(path, "/admin/properties/<int:id>/edit")
     if params:
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         prop = models.get_property(params['id'])
         if not prop:
-            return Response.html(404, generate_error_page(404))
-        return Response.html(200, generate_edit_property_form(prop))
+            return Response.html(404, generate_error_page(404, user_id=user_id))
+        return Response.html(200, generate_edit_property_form(prop, user_id))
 
     # ---------- حذف آیتم از cart/wishlist ----------
     params = match_route(path, "/cart/<int:id>/remove")
@@ -364,16 +379,16 @@ def process_post(path, body, user_id=None, headers=None):
     p = match_route(path, "/admin/users/<int:id>/edit")
     if p:
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         return handle_edit_user(params, p['id'])
 
     p = match_route(path, "/admin/properties/<int:id>/edit")
     if p:
         if not _require_admin(user_id):
-            return Response.forbidden()
+            return Response.forbidden(user_id)
         return handle_edit_property(params, p['id'])
 
-    return Response.html(404, generate_error_page(404))
+    return Response.html(404, generate_error_page(404, user_id=user_id))
 
 
 # ======================== handler functions ========================
@@ -492,36 +507,32 @@ def handle_login(params, wants_json=False):
 
 
 def handle_logout_get(user_id):
-    """نمایش صفحه خداحافظی یا مستقیم لاگ‌اوت."""
+    """نمایش صفحه‌ی خروج با JS خارجی برای پاک‌کردن کوکی و ریدایرکت."""
     return handle_logout_post(user_id)
 
 
 def handle_logout_post(user_id):
-    """پاک‌کردن نشست و کوکی."""
-    # نکته: session_id را از سرور می‌گیریم، اما چون اینجا فقط user_id داریم،
-    # از کوکی استفاده می‌کنیم. این متد بهتر است در server.py هندل شود.
-    # اما برای سادگی، یک صفحه با JavaScript برای پاک‌کردن کوکی برمی‌گردانیم.
-    body = """
-    <!DOCTYPE html>
-    <html lang='fa' dir='rtl'>
-    <head><meta charset='UTF-8'><title>خروج</title></head>
-    <body>
-    <h2>در حال خروج...</h2>
-    <script>
-      document.cookie = 'session_id=; path=/; max-age=0';
-      window.location.href = '/';
-    </script>
-    <p>اگر به‌طور خودکار منتقل نشدید، <a href='/'>اینجا کلیک کنید</a>.</p>
-    </body>
-    </html>
+    """پاک‌کردن نشست در سمت سرور و کلاینت.
+
+    - سرور کوکی session_id را با max-age=0 پاک می‌کند.
+    - در سمت کلاینت، فایل logout.js نیز کوکی را پاک می‌کند و سپس ریدایرکت می‌کند.
+    - به‌جای inline script، از templates/logout.html + static/js/logout.js استفاده می‌شود.
     """
+    # (اختیاری) پاک‌کردن session از DB — فعلاً فقط کوکی پاک می‌شود
+    # if user_id:
+    #     models.delete_sessions_for_user(user_id)
+
     # هدر Set-Cookie برای پاک‌کردن کوکی
     cookie = SimpleCookie()
     cookie["session_id"] = ""
     cookie["session_id"]["path"] = "/"
     cookie["session_id"]["max-age"] = 0
+    cookie["session_id"]["httponly"] = True
+    cookie["session_id"]["samesite"] = "Lax"
     headers = [("Set-Cookie", cookie["session_id"].OutputString())]
-    return Response.html(200, body, headers)
+
+    # قالب خروج — با JS خارجی
+    return Response.html(200, generate_logout_page(), headers)
 
 
 def handle_add_property(params, user_id, wants_json=False):

@@ -2,24 +2,41 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سبد خرید</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سبد خرید | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header class="main-header">
     <div class="header-container">
-        <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
         <nav class="main-nav">
             <a href="/">خانه</a>
             <a href="/catalog">اقامتگاه‌ها</a>
-            <a href="/cart">🛒 سبد</a>
-            <a href="/wishlist">❤️ علاقه‌مندی</a>
-            <a href="/logout" class="btn-primary">خروج</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
         </nav>
     </div>
 </header>
-<div class="container" style="max-width:800px;margin:2rem auto;">
-    <h1>سبد خرید شما</h1>
+
+<main>
+<div class="container" style="max-width:900px;margin:2.5rem auto;">
+    <div class="page-header">
+        <h1><i class="fas fa-shopping-cart" style="color:var(--primary);"></i> سبد خرید شما</h1>
+        <p>اقامتگاه‌هایی که برای رزرو انتخاب کرده‌اید</p>
+    </div>
     {% if items %}
     <table class="data-table">
         <thead>
@@ -33,19 +50,37 @@
         <tbody>
             {% for item in items %}
             <tr>
-                <td>{{ item.title }}</td>
-                <td>{{ item.location }}</td>
-                <td>{{ item.price_per_night }} تومان</td>
-                <td><a href="/cart/{{ item.cart_id }}/remove" style="color:#dc3545;">حذف</a></td>
+                <td><strong>{{ item.title }}</strong></td>
+                <td><i class="fas fa-map-marker-alt" style="color:var(--accent);"></i> {{ item.location }}</td>
+                <td style="color:var(--accent);font-weight:600;">{{ item.price_per_night }} تومان</td>
+                <td><a href="/cart/{{ item.cart_id }}/remove" style="color:var(--danger);"><i class="fas fa-trash"></i> حذف</a></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <p style="text-align:left;font-size:1.2rem;margin-top:1rem;">جمع: {{ total }} تومان</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;flex-wrap:wrap;gap:1rem;">
+        <a href="/catalog" class="btn-ghost"><i class="fas fa-arrow-right"></i> ادامه خرید</a>
+        <div style="font-size:1.25rem;font-weight:700;color:var(--text);">
+            جمع کل: <span style="color:var(--accent);">{{ total }}</span> تومان
+        </div>
+    </div>
     {% else %}
-    <p style="text-align:center;color:#888;padding:2rem;">سبد خرید شما خالی است.</p>
+    <div style="text-align:center;padding:4rem 1rem;color:var(--text-muted);">
+        <i class="fas fa-shopping-cart" style="font-size:4rem;opacity:0.2;display:block;margin-bottom:1rem;"></i>
+        <h2 style="color:var(--text);margin-bottom:0.5rem;">سبد خرید شما خالی است</h2>
+        <p style="margin-bottom:1.5rem;">اقامتگاه‌های مورد علاقه را به سبد خرید اضافه کنید</p>
+        <a href="/catalog" class="btn-primary">مشاهده اقامتگاه‌ها</a>
+    </div>
     {% endif %}
-    <p><a href="/catalog">بازگشت به کاتالوگ</a></p>
 </div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
 </body>
 </html>

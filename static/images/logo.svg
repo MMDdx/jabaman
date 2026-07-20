@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- لوگوی پیش‌فرض جابامن.
+     برای جایگزینی: یک فایل logo.png با ابعاد ۱۶۰×۴۰ پیکسل در مسیر static/images/ قرار دهید.
+     یا این SVG را با طراحی خودتان جایگزین کنید. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" width="200" height="48">
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#134E4A"/>
+    </linearGradient>
+  </defs>
+  <!-- آیکون دایره‌ای با حرف ج -->
+  <rect x="0" y="4" width="40" height="40" rx="12" fill="url(#logoGrad)"/>
+  <text x="20" y="32" font-family="Tahoma, sans-serif" font-size="26" font-weight="bold"
+        fill="#F97316" text-anchor="middle">ج</text>
+  <!-- متن "جابامن" -->
+  <text x="50" y="32" font-family="Vazirmatn, Tahoma, sans-serif" font-size="22" font-weight="bold"
+        fill="#0F766E">جابامن</text>
+</svg>

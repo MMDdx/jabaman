@@ -3,13 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>درج اقامتگاه جدید | پلتفرم اجاره اقامتگاه</title>
-    <!-- اصلاح: مسیر CSS مطلق شد -->
-    <link rel="stylesheet" href="/static/style.css">
+    <title>درج اقامتگاه جدید | جابامن</title>
+    <meta name="description" content="افزودن اقامتگاه جدید به جابامن">
+
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/images/favicon.svg">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
 <div class="add-listing-container">
 
     <div class="page-header">
@@ -23,14 +50,15 @@
             <h2>فرم افزودن اقامتگاه</h2>
         </div>
 
-        <!--
-            اصلاحات:
-            - action به /add-property
-            - enctype حذف شد (چون فایل‌ها سرو نمی‌شوند)
-            - نام فیلدها با کنترلر همخوان شد: title, property_type, price_per_night, ...
-            - host_id حذف شد (از نشست گرفته می‌شود)
-        -->
-        <form class="listing-form" action="/add-property" method="POST">
+        <div id="form-message" class="form-message" role="alert" style="display:none;"></div>
+
+        <form class="listing-form"
+              action="/add-property"
+              method="POST"
+              data-ajax-form
+              data-loading-text="در حال ثبت..."
+              data-success-message="اقامتگاه با موفقیت ثبت شد."
+              data-success-redirect="/catalog">
 
             <div class="form-group">
                 <label for="property-title">عنوان اقامتگاه <span class="required-star">*</span></label>
@@ -91,60 +119,57 @@
             </div>
 
             <div class="form-group">
-                <label>امکانات</label>
+                <label>امکانات اقامتگاه</label>
                 <div class="amenities-grid">
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-wifi" name="amenities" value="wifi">
-                        <label for="amenity-wifi">وای‌فای</label>
+                        <label for="amenity-wifi"><i class="fas fa-wifi" style="color:var(--primary);"></i> وای‌فای</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-parking" name="amenities" value="parking">
-                        <label for="amenity-parking">پارکینگ</label>
+                        <label for="amenity-parking"><i class="fas fa-car" style="color:var(--primary);"></i> پارکینگ</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-pool" name="amenities" value="pool">
-                        <label for="amenity-pool">استخر</label>
+                        <label for="amenity-pool"><i class="fas fa-swimming-pool" style="color:var(--primary);"></i> استخر</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-kitchen" name="amenities" value="kitchen">
-                        <label for="amenity-kitchen">آشپزخانه</label>
+                        <label for="amenity-kitchen"><i class="fas fa-utensils" style="color:var(--primary);"></i> آشپزخانه</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-ac" name="amenities" value="air_conditioning">
-                        <label for="amenity-ac">کولر/گرمایش</label>
+                        <label for="amenity-ac"><i class="fas fa-snowflake" style="color:var(--primary);"></i> کولر/گرمایش</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-tv" name="amenities" value="tv">
-                        <label for="amenity-tv">تلویزیون</label>
+                        <label for="amenity-tv"><i class="fas fa-tv" style="color:var(--primary);"></i> تلویزیون</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-washer" name="amenities" value="washer">
-                        <label for="amenity-washer">ماشین لباسشویی</label>
+                        <label for="amenity-washer"><i class="fas fa-washing-machine" style="color:var(--primary);"></i> لباسشویی</label>
                     </div>
                     <div class="amenity-item">
                         <input type="checkbox" id="amenity-pet" name="amenities" value="pet_friendly">
-                        <label for="amenity-pet">مناسب حیوانات</label>
+                        <label for="amenity-pet"><i class="fas fa-paw" style="color:var(--primary);"></i> مناسب حیوانات</label>
                     </div>
                 </div>
             </div>
 
-            <!--
-                نکته: فیلدهای file حذف شدند چون backend فعلی از upload تصویر
-                پشتیبانی نمی‌کند. در صورت نیاز، باید multipart/form-data و
-                ذخیره‌ی فایل در پوشه static/uploads/ پیاده‌سازی شود.
-            -->
-
             <button type="submit" class="submit-btn">
-                درج اقامتگاه <i class="fas fa-chevron-left"></i>
+                <span>درج اقامتگاه</span>
+                <i class="fas fa-chevron-left"></i>
             </button>
-
         </form>
     </div>
 
     <div class="site-footer">
-        © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
+        © ۱۴۰۴ جابامن — تمام حقوق محفوظ است.
     </div>
 </div>
+</main>
 
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>

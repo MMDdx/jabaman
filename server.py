@@ -19,13 +19,9 @@ HOST = "localhost"
 PORT = 8000
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
-# مسیرهای استاتیک HTML که به‌طور مستقیم از static/ سرو می‌شوند
-GET_STATIC_ROUTES = {
-    "/contact": "contact.html",
-    "/register": "signup.html",
-    "/login": "login.html",
-    "/add-property": "add-property.html",
-}
+# نکته: صفحات contact / login / signup / add-property اکنون از طریق router
+# و template engine سرو می‌شوند تا navbar یکپارچه و وابسته به وضعیت ورود باشد.
+# بنابراین دیگر نیازی به GET_STATIC_ROUTES نیست.
 
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
@@ -35,43 +31,36 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         user_id = models.get_user_by_session(session_id)
         path = self.path.split('?')[0]
 
-        # ۱. مسیرهای داینامیک (Router)
+        # ۱. مسیرهای داینامیک (Router) — شامل تمام صفحات HTML
         dynamic_response = router.process_get(path, user_id)
         if dynamic_response is not None:
             self._send(dynamic_response)
             return
 
-        # ۲. صفحات HTML استاتیک (login, signup, contact, add-property)
-        if path in GET_STATIC_ROUTES:
-            file_name = GET_STATIC_ROUTES[path]
-            file_path = os.path.join(STATIC_DIR, file_name)
-            if os.path.exists(file_path) and os.path.isfile(file_path):
-                with open(file_path, "rb") as f:
-                    body = f.read()
-                # HTML ها را no-cache کنیم تا تغییرات JS سریعاً اعمال شوند
-                self._send((200, "text/html; charset=utf-8", body, [
-                    ("Cache-Control", "no-cache, must-revalidate")
-                ]))
-            else:
-                self._send_error(404)
-            return
-
-        # ۳. فایل‌های استاتیک عمومی (CSS, JS, images)
+        # ۲. فایل‌های استاتیک عمومی (CSS, JS, images, fonts)
         if path.startswith("/static/"):
             file_path = os.path.join(STATIC_DIR, path[len("/static/"):])
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 content_type = self._guess_content_type(file_path)
                 with open(file_path, "rb") as f:
                     body = f.read()
-                # CSS/JS هم no-cache تا تغییرات سریع دیده شوند
+                # CSS/JS را no-cache می‌کنیم تا تغییرات سریع دیده شوند.
+                # اما فونت‌ها و تصاویر را cache می‌کنیم (با مدت زمان طولانی)
+                # چون تغییر نمی‌کنند و کش شدنشان سرعت لود را بالا می‌برد.
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext in (".woff", ".woff2", ".png", ".jpg", ".jpeg",
+                          ".gif", ".svg", ".ico", ".webp"):
+                    cache_control = "public, max-age=2592000"  # ۳۰ روز
+                else:
+                    cache_control = "no-cache, must-revalidate"
                 self._send((200, content_type, body, [
-                    ("Cache-Control", "no-cache, must-revalidate")
+                    ("Cache-Control", cache_control)
                 ]))
             else:
                 self._send_error(404)
             return
 
-        # ۴. هیچ‌کدام → ۴۰۴
+        # ۳. هیچ‌کدام → ۴۰۴
         self._send_error(404)
 
     def do_POST(self):

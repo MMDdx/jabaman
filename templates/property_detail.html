@@ -2,32 +2,39 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>{{ property.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ property.title }} | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header class="main-header">
     <div class="header-container">
-        <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
         <nav class="main-nav">
             <a href="/">خانه</a>
             <a href="/catalog">اقامتگاه‌ها</a>
             <a href="/contact">تماس با ما</a>
             {% if user_id %}
-            <a href="/cart">🛒 سبد</a>
-            <a href="/wishlist">❤️ علاقه‌مندی</a>
-            <a href="/logout" class="btn-primary">خروج</a>
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
             {% else %}
-            <a href="/register" class="btn-outline">ثبت‌نام</a>
-            <a href="/login" class="btn-primary">ورود</a>
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
             {% endif %}
         </nav>
     </div>
 </header>
+
+<main>
 <div class="detail-container">
     <div class="detail-header">
-        <span class="detail-icon">🏠</span>
+        <span class="detail-icon">{{ type_icon|default('🏠') }}</span>
         <div>
             <h1>{{ property.title }}</h1>
             <p class="detail-location"><i class="fas fa-map-marker-alt"></i> {{ property.location }}</p>
@@ -36,62 +43,96 @@
     <div class="detail-info">
         <div class="info-box"><i class="fas fa-bed"></i> {{ property.bedrooms }} خواب</div>
         <div class="info-box"><i class="fas fa-bath"></i> {{ property.bathrooms }} سرویس</div>
-        <div class="info-box"><i class="fas fa-user"></i> {{ property.max_guests }} مهمان</div>
+        <div class="info-box"><i class="fas fa-user"></i> تا {{ property.max_guests }} مهمان</div>
     </div>
-    <div class="detail-price">{{ property.price_per_night_fmt }} تومان / شب</div>
+    <div class="detail-price">
+        {{ property.price_per_night_fmt }}
+        <small>تومان / شب</small>
+    </div>
     <div class="detail-description">{{ property.description }}</div>
 
-    <!-- اصلاح: استفاده از price_per_night_fmt و نمایش نوار ناوبری -->
     {% if user_id %}
-    <div style="display:flex;gap:1rem;margin:1.5rem 0;">
-        <form method="POST" action="/cart/add">
+    <div style="display:flex;gap:1rem;margin:1.5rem 0;flex-wrap:wrap;">
+        <form method="POST" action="/cart/add" style="display:inline;">
             <input type="hidden" name="property_id" value="{{ property.id }}">
-            <button type="submit" class="btn-primary">🛒 افزودن به سبد خرید</button>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-shopping-cart"></i> افزودن به سبد خرید
+            </button>
         </form>
-        <form method="POST" action="/wishlist/add">
+        <form method="POST" action="/wishlist/add" style="display:inline;">
             <input type="hidden" name="property_id" value="{{ property.id }}">
-            <button type="submit" class="btn-outline">❤️ افزودن به علاقمندی</button>
+            <button type="submit" class="btn-outline">
+                <i class="fas fa-heart"></i> افزودن به علاقه‌مندی
+            </button>
         </form>
     </div>
     {% else %}
-    <div style="margin:1.5rem 0;padding:1rem;background:#fff3cd;border-radius:8px;">
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
         برای رزرو یا افزودن به علاقه‌مندی، لطفاً <a href="/login">وارد شوید</a> یا <a href="/register">ثبت‌نام کنید</a>.
     </div>
     {% endif %}
 
-    <!-- اصلاح: استفاده از comments_count به جای comments|length -->
-    <h2>نظرات ({{ comments_count }})</h2>
+    <h2 style="margin-top:2.5rem;margin-bottom:1rem;font-size:1.4rem;color:var(--text);display:flex;align-items:center;gap:0.5rem;">
+        <i class="fas fa-comments" style="color:var(--primary);"></i>
+        نظرات کاربران ({{ comments_count }})
+    </h2>
     {% if comments %}
         {% for comment in comments %}
         <div class="comment">
-            <strong>{{ comment.user_name }}</strong> - {{ comment.rating }}⭐
+            <strong>{{ comment.user_name }}</strong>
+            <span class="rating">{{ comment.rating }} ★</span>
             <p>{{ comment.comment_text }}</p>
             <small>{{ comment.created_at }}</small>
         </div>
         {% endfor %}
     {% else %}
-        <p style="color:#888;">هنوز نظری ثبت نشده است.</p>
+        <p style="color:var(--text-muted);padding:1.5rem;background:var(--bg-soft);border-radius:14px;text-align:center;">
+            <i class="fas fa-comment-slash" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:0.5;"></i>
+            هنوز نظری برای این اقامتگاه ثبت نشده است.
+        </p>
     {% endif %}
 
     {% if user_id %}
-    <div style="margin-top:2rem;">
-        <h3>دیدگاه خود را بنویسید</h3>
+    <div style="margin-top:2rem;padding:1.5rem;background:var(--bg-soft);border-radius:14px;border:1px solid var(--border-soft);">
+        <h3 style="margin-bottom:1rem;color:var(--text);font-size:1.1rem;">
+            <i class="fas fa-pen" style="color:var(--primary);"></i>
+            دیدگاه خود را بنویسید
+        </h3>
         <form method="POST" action="/comment/add">
             <input type="hidden" name="property_id" value="{{ property.id }}">
-            <textarea name="comment_text" class="form-control" rows="3" required></textarea>
-            <label>امتیاز:
-                <select name="rating" class="form-control" style="width:auto;display:inline-block;">
-                    <option value="5">۵ ستاره</option>
-                    <option value="4">۴ ستاره</option>
-                    <option value="3">۳ ستاره</option>
-                    <option value="2">۲ ستاره</option>
-                    <option value="1">۱ ستاره</option>
+            <div class="form-group">
+                <textarea name="comment_text" class="form-control" rows="3" placeholder="تجربه‌ی خود از این اقامتگاه را با دیگران به اشتراک بگذارید..." required></textarea>
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                <label style="margin:0;">امتیاز شما:</label>
+                <select name="rating" class="form-control" style="width:auto;">
+                    <option value="5">★★★★★ عالی</option>
+                    <option value="4">★★★★☆ خوب</option>
+                    <option value="3">★★★☆☆ متوسط</option>
+                    <option value="2">★★☆☆☆ ضعیف</option>
+                    <option value="1">★☆☆☆☆ بد</option>
                 </select>
-            </label>
-            <button type="submit" class="btn-primary" style="margin-top:1rem;">ارسال نظر</button>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> ارسال نظر
+                </button>
+            </div>
         </form>
     </div>
     {% endif %}
+
+    <p style="text-align:center;margin-top:2rem;">
+        <a href="/catalog" class="btn-ghost"><i class="fas fa-arrow-right"></i> بازگشت به کاتالوگ</a>
+    </p>
 </div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
 </body>
 </html>

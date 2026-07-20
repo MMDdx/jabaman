@@ -3,127 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پلتفرم اجاره اقامتگاه - صفحه اصلی</title>
+    <title>جابامن | اجاره اقامتگاه، ویلا و سوئیت</title>
+    <meta name="description" content="جابامن — پلتفرم اجاره اقامتگاه، ویلا، آپارتمان و کلبه برای سفرهای خاطره‌انگیز در سراسر ایران">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/images/favicon.svg">
+
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <!-- استایل اصلی -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header class="main-header">
         <div class="header-container">
-            <a href="/" class="logo">🏡 اقامتگاه‌یاب</a>
+            <a href="/" class="logo" aria-label="جابامن">
+                <!--
+                  لوگوی پیش‌فرض با SVG.
+                  برای جایگزینی: یک فایل logo.png با ابعاد حدود ۲۰۰×۴۸ پیکسل
+                  در مسیر static/images/logo.png قرار دهید و خط زیر را با
+                  <img src="/static/images/logo.png" class="logo-img" alt="جابامن">
+                  جایگزین کنید.
+                -->
+                <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+                <span class="logo-text" style="display:none;">جابا<span class="accent">من</span></span>
+            </a>
             <nav class="main-nav">
                 <a href="/">خانه</a>
                 <a href="/catalog">اقامتگاه‌ها</a>
                 <a href="/contact">تماس با ما</a>
-                <!-- اصلاح: نوار ناوبری بر اساس وضعیت ورود -->
                 {% if user_id %}
-                <a href="/cart">🛒 سبد</a>
-                <a href="/wishlist">❤️ علاقه‌مندی</a>
-                <a href="/add-property" class="btn-outline">افزودن اقامتگاه</a>
-                <a href="/logout" class="btn-primary">خروج</a>
+                <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+                <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+                <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+                <a href="/logout" class="btn-primary btn-sm">خروج</a>
                 {% else %}
-                <a href="/register" class="btn-outline">ثبت‌نام</a>
-                <a href="/login" class="btn-primary">ورود</a>
+                <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+                <a href="/login" class="btn-primary btn-sm">ورود</a>
                 {% endif %}
             </nav>
         </div>
     </header>
 
-    <section class="hero">
-        <div class="hero-content">
-            <h1>اقامتگاه رویایی‌ات را پیدا کن</h1>
-            <p>از ویلاهای ساحلی تا کلبه‌های جنگلی، بهترین اقامتگاه‌ها برای سفری خاطره‌انگیز</p>
-            <div class="hero-buttons">
-                <a href="/catalog" class="btn-primary btn-lg">مشاهده اقامتگاه‌ها</a>
-                {% if not user_id %}
-                <a href="/register" class="btn-outline btn-lg">میزبان شوید</a>
-                {% endif %}
-            </div>
-        </div>
-    </section>
-
-    <section class="features">
-        <div class="container">
-            <h2>چرا اقامتگاه‌یاب؟</h2>
-            <div class="features-grid">
-                <div class="feature-item">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>امن و قابل اعتماد</h3>
-                    <p>تأیید هویت میزبانان و مهمانان برای اطمینان خاطر شما</p>
-                </div>
-                <div class="feature-item">
-                    <i class="fas fa-wallet"></i>
-                    <h3>پرداخت آسان</h3>
-                    <p>پرداخت امن آنلاین و پشتیبانی ۲۴ ساعته</p>
-                </div>
-                <div class="feature-item">
-                    <i class="fas fa-star"></i>
-                    <h3>بهترین انتخاب‌ها</h3>
-                    <p>اقامتگاه‌های متنوع با بهترین قیمت و امتیاز کاربران</p>
-                </div>
-                <div class="feature-item">
-                    <i class="fas fa-headset"></i>
-                    <h3>پشتیبانی همیشگی</h3>
-                    <p>تیم پشتیبانی آماده پاسخگویی در تمام روزهای هفته</p>
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h1>اقامتگاه رویایی‌ات را پیدا کن</h1>
+                <p>از ویلاهای ساحلی تا کلبه‌های جنگلی، بهترین اقامتگاه‌ها برای سفری خاطره‌انگیز در سراسر ایران</p>
+                <div class="hero-buttons">
+                    <a href="/catalog" class="btn-primary btn-lg">
+                        <i class="fas fa-search"></i> مشاهده اقامتگاه‌ها
+                    </a>
+                    {% if not user_id %}
+                    <a href="/register" class="btn-outline btn-lg">میزبان شوید</a>
+                    {% endif %}
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="featured-properties">
-        <div class="container">
-            <h2>اقامتگاه‌های محبوب</h2>
-            <div class="property-grid">
-                {% if properties %}
-                    {% for prop in properties %}
-                    <div class="property-card">
-                        <div class="card-image">
-                            <span class="card-type-icon">{{ prop.type_icon }}</span>
-                        </div>
-                        <div class="card-body">
-                            <h3>{{ prop.title }}</h3>
-                            <p class="card-location"><i class="fas fa-map-marker-alt"></i> {{ prop.location }}</p>
-                            <div class="card-footer">
-                                <span class="card-price">{{ prop.price_per_night }} تومان / شب</span>
-                                <a href="/property/{{ prop.id }}" class="card-btn">مشاهده</a>
+        <section class="features">
+            <div class="container">
+                <h2>چرا جابامن؟</h2>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fas fa-shield-alt"></i></span>
+                        <h3>امن و قابل اعتماد</h3>
+                        <p>تأیید هویت میزبانان و مهمانان برای اطمینان خاطر شما در هر رزرو</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fas fa-wallet"></i></span>
+                        <h3>قیمت منصفانه</h3>
+                        <p>بهترین قیمت‌ها بدون کارمزد پنهان، با امکان مقایسه‌ی آسان اقامتگاه‌ها</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fas fa-star"></i></span>
+                        <h3>بهترین انتخاب‌ها</h3>
+                        <p>اقامتگاه‌های متنوع با امتیاز واقعی کاربران و نظرات قابل اعتماد</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fas fa-headset"></i></span>
+                        <h3>پشتیبانی همیشگی</h3>
+                        <p>تیم پشتیبانی جابامن آماده‌ی پاسخگویی در تمام روزهای هفته است</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="featured-properties">
+            <div class="container">
+                <h2>اقامتگاه‌های محبوب</h2>
+                <div class="property-grid">
+                    {% if properties %}
+                        {% for prop in properties %}
+                        <div class="property-card">
+                            <div class="card-image">
+                                <span class="card-type-icon">{{ prop.type_icon }}</span>
+                            </div>
+                            <div class="card-body">
+                                <h3>{{ prop.title }}</h3>
+                                <p class="card-location">
+                                    <i class="fas fa-map-marker-alt"></i> {{ prop.location }}
+                                </p>
+                                <div class="card-footer">
+                                    <span class="card-price">
+                                        {{ prop.price_per_night }}
+                                        <small>تومان / شب</small>
+                                    </span>
+                                    <a href="/property/{{ prop.id }}" class="card-btn">مشاهده</a>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p style="text-align:center;grid-column:1/-1;">هنوز اقامتگاهی ثبت نشده است.</p>
-                {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p style="text-align:center;grid-column:1/-1;color:var(--text-muted);padding:3rem 1rem;">
+                            <i class="fas fa-home" style="font-size:3rem;display:block;margin-bottom:1rem;opacity:0.3;"></i>
+                            هنوز اقامتگاهی ثبت نشده است.
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="text-center" style="margin-top:2rem;">
+                    <a href="/catalog" class="btn-outline btn-lg">مشاهده همه اقامتگاه‌ها</a>
+                </div>
             </div>
-            <div class="text-center" style="margin-top:2rem;">
-                <a href="/catalog" class="btn-primary">مشاهده همه اقامتگاه‌ها</a>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <footer class="main-footer">
-        <div class="container footer-content">
+        <div class="footer-content">
             <div class="footer-col">
-                <h3>اقامتگاه‌یاب</h3>
-                <p>بزرگترین پلتفرم اجاره اقامتگاه در ایران</p>
+                <h3>
+                    <img src="/static/images/logo.svg" alt="جابامن" style="height:36px;filter:brightness(0) invert(1);" class="fallback-hide">
+                    <span style="display:none;">جابامن</span>
+                </h3>
+                <p>پلتفرم اجاره اقامتگاه برای سفرهای خاطره‌انگیز در سراسر ایران. میزبانان و مهمانان را به‌هم متصل می‌کنیم.</p>
             </div>
             <div class="footer-col">
                 <h4>لینک‌های مفید</h4>
+                <a href="/">خانه</a>
                 <a href="/catalog">اقامتگاه‌ها</a>
                 <a href="/contact">تماس با ما</a>
-                <a href="#">قوانین و مقررات</a>
+                <a href="/add-property">میزبانی در جابامن</a>
             </div>
             <div class="footer-col">
-                <h4>شبکه‌های اجتماعی</h4>
+                <h4>پشتیبانی</h4>
+                <a href="#">قوانین و مقررات</a>
+                <a href="#">سؤالات متداول</a>
+                <a href="#">حریم خصوصی</a>
+                <a href="/contact">ارتباط با ما</a>
+            </div>
+            <div class="footer-col">
+                <h4>ما را دنبال کنید</h4>
                 <div class="social-links">
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-telegram"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
                 </div>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>© ۲۰۲۵ تمام حقوق محفوظ است.</p>
+            <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
         </div>
     </footer>
+
+<script src="/static/js/main.js"></script>
 </body>
 </html>

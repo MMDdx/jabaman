@@ -3,17 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تماس با ما | ارتباط با کسب‌وکار</title>
-    <!-- اصلاح: مسیر CSS مطلق شد -->
-    <link rel="stylesheet" href="/static/style.css">
+    <title>تماس با ما | جابامن</title>
+    <meta name="description" content="ارتباط با تیم پشتیبانی جابامن">
+
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/images/favicon.svg">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
 <div class="contact-container">
 
     <div class="page-header">
-        <h1>تماس با ما</h1>
+        <h1>تماس با جابامن</h1>
         <p>ما همیشه آماده شنیدن صدای شما هستیم. از طریق راه‌های زیر با ما در ارتباط باشید.</p>
     </div>
 
@@ -50,9 +77,9 @@
                 <div>
                     <div class="item-title">ایمیل</div>
                     <div class="item-detail">
-                        <a href="mailto:info@yourbusiness.com">info@yourbusiness.com</a>
+                        <a href="mailto:info@jabaman.ir">info@jabaman.ir</a>
                         <span> | </span>
-                        <a href="mailto:support@yourbusiness.com">support@yourbusiness.com</a>
+                        <a href="mailto:support@jabaman.ir">support@jabaman.ir</a>
                     </div>
                 </div>
             </div>
@@ -62,10 +89,10 @@
                 <div>
                     <div class="item-title">وب‌سایت و شبکه‌های اجتماعی</div>
                     <div class="social-links">
-                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
                         <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
                         <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
                     </div>
                 </div>
             </div>
@@ -91,8 +118,14 @@
                 <h2>فرم تماس</h2>
             </div>
 
-            <!-- اصلاح: action به /contact و نام فیلدها استاندارد شد -->
-            <form class="contact-form" action="/contact" method="POST">
+            <div id="form-message" class="form-message" role="alert" style="display:none;"></div>
+
+            <form class="contact-form"
+                  action="/contact"
+                  method="POST"
+                  data-ajax-form
+                  data-loading-text="در حال ارسال..."
+                  data-success-message="پیام شما با موفقیت ارسال شد. به‌زودی پاسخ خواهیم داد.">
 
                 <div class="form-group">
                     <label for="fullname">نام و نام خانوادگی <span class="required-star">*</span></label>
@@ -125,16 +158,17 @@
                 </div>
 
                 <button type="submit" class="submit-btn">
-                    ارسال پیام <i class="fas fa-chevron-left"></i>
+                    <span>ارسال پیام</span>
+                    <i class="fas fa-chevron-left"></i>
                 </button>
 
-                <p class="form-note">با ارسال این فرم، با قوانین و سیاست حفظ حریم خصوصی ما موافقت می‌کنید.</p>
+                <p class="form-note">با ارسال این فرم، با قوانین و سیاست حفظ حریم خصوصی جابامن موافقت می‌کنید.</p>
             </form>
         </div>
     </div>
 
     <footer class="contact-footer">
-        <p>© ۲۰۲۵ تمام حقوق محفوظ است. نام تجاری شما.</p>
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
         <div class="footer-links">
             <a href="#">حریم خصوصی</a>
             <a href="#">قوانین</a>
@@ -142,6 +176,9 @@
         </div>
     </footer>
 </div>
+</main>
 
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>

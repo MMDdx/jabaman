@@ -3,16 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ثبت‌نام | پلتفرم اجاره اقامتگاه</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>ثبت‌نام | جابامن</title>
+    <meta name="description" content="ثبت‌نام در جابامن — پلتفرم اجاره اقامتگاه">
+
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/images/favicon.svg">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            <a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
 <div class="register-container">
 
     <div class="page-header">
-        <h1>پلتفرم اجاره اقامتگاه</h1>
+        <h1>ثبت‌نام در جابامن</h1>
         <p>با ایجاد حساب کاربری، رزرو اقامتگاه‌ها یا میزبانی از مهمانان ساده‌تر می‌شود.</p>
     </div>
 
@@ -22,13 +50,8 @@
             <h2>فرم ثبت‌نام</h2>
         </div>
 
-        <!-- باکس پیام خطا/موفقیت — توسط auth.js پر می‌شود -->
         <div id="form-message" class="form-message" role="alert" aria-live="polite" style="display:none;"></div>
 
-        <!--
-          ویژگی data-ajax-form باعث می‌شود auth.js این فرم را هندل کند.
-          سرور در پاسخ موفقیت، redirect=/login برمی‌گرداند.
-        -->
         <form class="register-form"
               id="signup-form"
               action="/register"
@@ -100,12 +123,12 @@
     </div>
 
     <div class="site-footer">
-        © ۲۰۲۵ پلتفرم اجاره اقامتگاه — تمام حقوق محفوظ است.
+        © ۱۴۰۴ جابامن — تمام حقوق محفوظ است.
     </div>
 </div>
+</main>
 
-<!-- اسکریپت مشترک فرم‌های ورود/ثبت‌نام -->
 <script src="/static/js/auth.js"></script>
-
+<script src="/static/js/main.js"></script>
 </body>
 </html>

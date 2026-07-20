@@ -1,11 +1,12 @@
 # views.py
 """لایه‌ی View در معماری MVC — تولید HTML با استفاده از template engine.
 
-تغییرات نسبت به نسخه‌ی قبل:
-- تمام داده‌ها به dict تبدیل می‌شوند (نه sqlite3.Row).
-- توابع کمکی برای نمایش نوار ناوبری بر اساس وضعیت ورود.
-- پشتیبانی از price formatting یکپارچه.
-- صفحه ریدایرکت لاگین استاندارد.
+تغییرات نسخه‌ی فعلی:
+- تمام توابع user_id را دریافت و به template می‌فرستند تا navbar یکپارچه باشد.
+- صفحات contact / login / signup / add-property از static به templates منتقل شدند
+  و حالا از طریق این لایه با user_id رندر می‌شوند.
+- logout و login-redirect هم قالب اختصاصی گرفتند تا JS بیرون فایل باشد.
+- price formatting یکپارچه.
 """
 from template_engine import render_template
 
@@ -34,6 +35,10 @@ def _get_first_image(images_str):
     return images_str.split(",")[0].strip()
 
 
+# ========================
+#   صفحات اصلی (عمومی)
+# ========================
+
 def generate_home_html(featured_properties, user_id=None):
     props = []
     for p in featured_properties:
@@ -50,7 +55,7 @@ def generate_home_html(featured_properties, user_id=None):
     })
 
 
-def generate_catalog_html(title, properties):
+def generate_catalog_html(title, properties, user_id=None):
     props = []
     for p in properties:
         desc = p.get("description") or ""
@@ -65,39 +70,11 @@ def generate_catalog_html(title, properties):
             "short_desc": (desc[:100] + "...") if len(desc) > 100 else desc,
             "type_icon": ICON_MAP.get(p.get("property_type"), "🏠")
         })
-    return render_template("catalog.html", {"title": title, "properties": props})
-
-
-def generate_table_html(title, columns, rows):
-    """ساخت جدول ادمین.
-
-    columns: لیست عناوین ستون‌ها
-    rows: لیست دیکشنری‌ها. کلیدهای dict باید با keys/columns جدول یکسان باشند.
-    """
-    # اگر rows از sqlite3.Row باشد، به dict تبدیل کن
-    norm_rows = []
-    for r in rows:
-        if hasattr(r, "keys"):
-            r = dict(r)
-        norm_rows.append(r)
-    return render_template("table.html", {
+    return render_template("catalog.html", {
         "title": title,
-        "columns": columns,
-        "rows": norm_rows
+        "properties": props,
+        "user_id": user_id
     })
-
-
-def generate_edit_user_form(user):
-    """user باید dict باشد."""
-    if hasattr(user, "keys"):
-        user = dict(user)
-    return render_template("edit_user.html", {"user": user})
-
-
-def generate_edit_property_form(property_data):
-    if hasattr(property_data, "keys"):
-        property_data = dict(property_data)
-    return render_template("edit_property.html", {"property": property_data})
 
 
 def generate_property_detail(prop, comments, user_id=None):
@@ -119,7 +96,45 @@ def generate_property_detail(prop, comments, user_id=None):
     })
 
 
-def generate_cart_page(cart_items):
+# ========================
+#   صفحات فرم (عمومی)
+# ========================
+
+def generate_contact_page(user_id=None):
+    """صفحه‌ی تماس با ما — اکنون قالب‌محور است تا navbar یکپارچه باشد."""
+    return render_template("contact.html", {"user_id": user_id})
+
+
+def generate_login_page(user_id=None):
+    """صفحه‌ی ورود — اکنون قالب‌محور است."""
+    return render_template("login.html", {"user_id": user_id})
+
+
+def generate_signup_page(user_id=None):
+    """صفحه‌ی ثبت‌نام — اکنون قالب‌محور است."""
+    return render_template("signup.html", {"user_id": user_id})
+
+
+def generate_add_property_page(user_id=None):
+    """صفحه‌ی درج اقامتگاه — اکنون قالب‌محور است."""
+    return render_template("add-property.html", {"user_id": user_id})
+
+
+def generate_logout_page():
+    """صفحه‌ی خروج — JS در فایل جداگانه (logout.js)."""
+    return render_template("logout.html", {})
+
+
+def generate_login_redirect_page():
+    """صفحه‌ی «نیاز به ورود» — JS در فایل جداگانه (login_redirect.js)."""
+    return render_template("login_redirect.html", {})
+
+
+# ========================
+#   صفحات نیازمند ورود
+# ========================
+
+def generate_cart_page(cart_items, user_id=None):
     items = []
     total = 0
     for item in cart_items:
@@ -134,11 +149,12 @@ def generate_cart_page(cart_items):
         total += float(price)
     return render_template("cart.html", {
         "items": items,
-        "total": _fmt_price(total)
+        "total": _fmt_price(total),
+        "user_id": user_id
     })
 
 
-def generate_wishlist_page(wishlist_items):
+def generate_wishlist_page(wishlist_items, user_id=None):
     items = []
     for item in wishlist_items:
         img = _get_first_image(item.get("images"))
@@ -150,17 +166,70 @@ def generate_wishlist_page(wishlist_items):
             "price_per_night": _fmt_price(item["price_per_night"]),
             "image_url": img
         })
-    return render_template("wishlist.html", {"items": items})
+    return render_template("wishlist.html", {
+        "items": items,
+        "user_id": user_id
+    })
 
 
-def generate_message_detail(message_data):
+# ========================
+#   صفحات ادمین
+# ========================
+
+def generate_table_html(title, columns, rows, user_id=None):
+    """ساخت جدول ادمین.
+
+    columns: لیست عناوین ستون‌ها
+    rows: لیست دیکشنری‌ها. کلیدهای dict باید با keys/columns جدول یکسان باشند.
+    """
+    # اگر rows از sqlite3.Row باشد، به dict تبدیل کن
+    norm_rows = []
+    for r in rows:
+        if hasattr(r, "keys"):
+            r = dict(r)
+        norm_rows.append(r)
+    return render_template("table.html", {
+        "title": title,
+        "columns": columns,
+        "rows": norm_rows,
+        "user_id": user_id
+    })
+
+
+def generate_edit_user_form(user, user_id=None):
+    """user باید dict باشد."""
+    if hasattr(user, "keys"):
+        user = dict(user)
+    return render_template("edit_user.html", {
+        "user": user,
+        "user_id": user_id
+    })
+
+
+def generate_edit_property_form(property_data, user_id=None):
+    if hasattr(property_data, "keys"):
+        property_data = dict(property_data)
+    return render_template("edit_property.html", {
+        "property": property_data,
+        "user_id": user_id
+    })
+
+
+def generate_message_detail(message_data, user_id=None):
     if hasattr(message_data, "keys"):
         message_data = dict(message_data)
     message_data["read_status"] = "خوانده شده" if message_data.get("is_read") else "خوانده نشده"
-    return render_template("message_detail.html", {"message": message_data})
+    return render_template("message_detail.html", {
+        "message": message_data,
+        "user_id": user_id
+    })
 
 
-def generate_error_page(status_code, message=""):
+# ========================
+#   صفحه خطا
+# ========================
+
+def generate_error_page(status_code, message="", user_id=None):
     if status_code == 404:
         title = "صفحه پیدا نشد"
         desc = "متأسفانه صفحه‌ای که به دنبال آن هستید وجود ندارد یا حذف شده است."
@@ -178,21 +247,6 @@ def generate_error_page(status_code, message=""):
     return render_template("error.html", {
         "code": status_code,
         "title": title,
-        "description": desc
+        "description": desc,
+        "user_id": user_id
     })
-
-
-def generate_login_redirect_page():
-    """صفحه‌ای که کاربر را به صفحه ورود هدایت می‌کند."""
-    return """
-    <!DOCTYPE html>
-    <html lang='fa' dir='rtl'>
-    <head><meta charset='UTF-8'><title>نیاز به ورود</title>
-    <meta http-equiv='refresh' content='2;url=/login'></head>
-    <body>
-    <h2>برای دسترسی به این صفحه باید وارد شوید.</h2>
-    <p>در حال انتقال به صفحه ورود...</p>
-    <p><a href='/login'>ورود</a></p>
-    </body>
-    </html>
-    """
