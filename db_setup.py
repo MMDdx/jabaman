@@ -5,6 +5,8 @@
 - فیلد `email` جایگزین `phone` به‌عنوان شناسه یکتای ورود شده است.
 - `phone` همچنان به‌عنوان فیلد اختیاری برای تماس باقی مانده است.
 - `is_admin` به جدول users اضافه شده تا کنترل دسترسی مسیرهای /admin ممکن شود.
+- `is_admin` به‌صورت BOOLEAN تعریف می‌شود (در SQLite هم‌معنی INTEGER 0/1 است،
+  اما از نظر خوانایی کد و قصد برنامه‌نویس، Boolean است).
 - PRAGMA foreign_keys = ON فعال شده تا ON DELETE CASCADE واقعاً کار کند.
 """
 import sqlite3
@@ -23,7 +25,7 @@ EXPECTED_SCHEMA = {
         "phone": "TEXT",
         "password": "TEXT NOT NULL",
         "account_type": "TEXT NOT NULL CHECK(account_type IN ('guest', 'host'))",
-        "is_admin": "INTEGER DEFAULT 0",
+        "is_admin": "BOOLEAN DEFAULT 0",
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
     },
     "properties": {
@@ -117,7 +119,7 @@ def create_tables(conn):
             phone TEXT,
             password TEXT NOT NULL,
             account_type TEXT NOT NULL CHECK(account_type IN ('guest', 'host')),
-            is_admin INTEGER DEFAULT 0,
+            is_admin BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         """CREATE TABLE IF NOT EXISTS properties (

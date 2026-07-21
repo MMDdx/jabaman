@@ -8,6 +8,8 @@
 - پشتیبانی از شرط‌های مقایسه‌ای: {% if var == 'value' %} و {% if not var %}.
 - پشتیبانی از حلقه با اندیس {% for i, item in enumerate(items) %}.
 - قابلیت{% elif %} و {% else %} در if.
+- **اصلاح باگ مهم:** پشتیبانی صحیح از if/else و for تو در تو (nested)
+  با استفاده از پارسر بازگشتی به‌جای regex.
 """
 import re
 import html
@@ -15,6 +17,12 @@ import os
 from collections.abc import Mapping
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+
+# الگوی پیدا‌ کردن همه‌ی تگ‌های {%%}
+_TAG_PATTERN = re.compile(
+    r'\{%\s*(if|elif|else|endif|for|endfor)\s*([^%]*?)\s*%\}',
+    re.DOTALL
+)
 
 
 def _get_value(obj, key):
@@ -47,10 +55,11 @@ def _resolve_expr(expr, context):
     - دسترسی با نقطه: {{ obj.attr }}
     - فیلتر length: {{ list|length }}
     - ایندکس عددی: {{ items.0 }}
+    - فیلتر safe: {{ var|safe }} (در replace_variables هندل می‌شود)
     """
     expr = expr.strip()
 
-    # فیلتر length
+    # فیلتر length یا safe
     if "|" in expr:
         parts = expr.split("|", 1)
         var_expr = parts[0].strip()
@@ -61,15 +70,15 @@ def _resolve_expr(expr, context):
                 return str(len(val))
             except TypeError:
                 return "0"
-        # فیلترهای دیگر در آینده
-        return str(val)
+        # فیلترهای دیگر (از جمله safe که در replace_variables هندل می‌شود)
+        return str(val) if val is not None else ""
 
     # دسترسی با نقطه
     if "." in expr:
         parts = expr.split(".")
         obj = context.get(parts[0])
         for part in parts[1:]:
-            if obj is None:
+            if obj is None or obj == "":
                 return ""
             # ایندکس عددی
             if part.isdigit() and isinstance(obj, (list, tuple)):
@@ -141,7 +150,7 @@ def _eval_condition(cond, context):
         if (right_raw.startswith("'") and right_raw.endswith("'")) or \
            (right_raw.startswith('"') and right_raw.endswith('"')):
             right = right_raw[1:-1]
-        elif right_raw.isdigit():
+        elif right_raw.lstrip('-').isdigit():
             right = int(right_raw)
         else:
             right = _resolve_expr(right_raw, context)
@@ -155,11 +164,199 @@ def _eval_condition(cond, context):
     return bool(val)
 
 
+# ============================================================
+#   پارسر بازگشتی (Tokenizer → AST → Renderer)
+# ============================================================
+#
+#   موتور قدیمی با regex کار می‌کرد که در حالت if/for تو در تو
+#   باگ داشت (باگ نمایش علاقه‌مندی‌ها). این نسخه‌ی جدید از یک
+#   پارسر بازگشتی استفاده می‌کند که درست با nesting رفتار می‌کند.
+#
+
+
+def _tokenize(template):
+    """تجزیه‌ی قالب به لیست توکن‌ها.
+
+    هر توکن یک تاپل (type, value) است:
+    - ('text', str)             متن ساده
+    - ('if', condition_str)     {% if cond %}
+    - ('elif', condition_str)   {% elif cond %}
+    - ('else', '')              {% else %}
+    - ('endif', '')             {% endif %}
+    - ('for', header_str)       {% for ... %}
+    - ('endfor', '')            {% endfor %}
+    """
+    tokens = []
+    pos = 0
+    for m in _TAG_PATTERN.finditer(template):
+        if m.start() > pos:
+            tokens.append(('text', template[pos:m.start()]))
+        tag = m.group(1)
+        arg = m.group(2).strip() if m.group(2) else ''
+        tokens.append((tag, arg))
+        pos = m.end()
+    if pos < len(template):
+        tokens.append(('text', template[pos:]))
+    return tokens
+
+
+def _parse_nodes(tokens, i, stop_tags):
+    """پارس لیست توکن‌ها تا رسیدن به یک تگ stop.
+
+    ورودی:
+      tokens       : لیست توکن‌ها
+      i            : اندیس شروع
+      stop_tags    : set از tagهایی که باید در برخورد با آن‌ها توقف کنیم
+
+    خروجی:
+      (nodes, next_i) که nodes لیست ندهای AST و next_i اندیس توکنی
+      است که باعث توقف شده (هنوز مصرف نشده).
+    """
+    nodes = []
+    while i < len(tokens):
+        tag, arg = tokens[i]
+        if tag in stop_tags:
+            return nodes, i
+        elif tag == 'text':
+            nodes.append(('text', arg))
+            i += 1
+        elif tag == 'if':
+            branches, next_i = _parse_if(tokens, i)
+            nodes.append(('if', branches))
+            i = next_i
+        elif tag == 'for':
+            body, next_i = _parse_for(tokens, i)
+            nodes.append(('for', arg, body))
+            i = next_i
+        else:
+            # تگ غیرمنتظره (elif/else/endif/endfor بدون جفت) → رد کن
+            i += 1
+    return nodes, i
+
+
+def _parse_if(tokens, i):
+    """پارس یک بلوک if شروع‌شده در tokens[i].
+
+    خروجی: (branches, next_i)
+      branches = لیست (condition, body_nodes). condition == None برای else.
+    """
+    if_cond = tokens[i][1]  # شرط if
+    i += 1
+
+    branches = []
+    body_nodes, i = _parse_nodes(tokens, i, {'elif', 'else', 'endif'})
+    branches.append((if_cond, body_nodes))
+
+    while i < len(tokens):
+        tag, arg = tokens[i]
+        if tag == 'elif':
+            i += 1
+            body_nodes, i = _parse_nodes(tokens, i, {'elif', 'else', 'endif'})
+            branches.append((arg, body_nodes))
+        elif tag == 'else':
+            i += 1
+            body_nodes, i = _parse_nodes(tokens, i, {'elif', 'else', 'endif'})
+            branches.append((None, body_nodes))
+        elif tag == 'endif':
+            i += 1  # مصرف endif
+            return branches, i
+        else:
+            # نباید اینجا برسد
+            return branches, i
+    return branches, i
+
+
+def _parse_for(tokens, i):
+    """پارس یک بلوک for شروع‌شده در tokens[i].
+
+    خروجی: (body_nodes, next_i)
+    """
+    i += 1  # مصرف for
+    body_nodes, i = _parse_nodes(tokens, i, {'endfor'})
+    if i < len(tokens) and tokens[i][0] == 'endfor':
+        i += 1  # مصرف endfor
+    return body_nodes, i
+
+
+def _render_for(header, body_nodes, context):
+    """رندر یک حلقه‌ی for.
+
+    header می‌تواند یکی از این دو حالت باشد:
+      - "item in items"
+      - "i, item in enumerate(items)"
+    """
+    # حالت enumerate
+    m = re.match(
+        r'^(\w+)\s*,\s*(\w+)\s+in\s+enumerate\((\w+)\)$',
+        header.strip()
+    )
+    if m:
+        idx_var = m.group(1)
+        item_var = m.group(2)
+        iterable_name = m.group(3)
+        items = context.get(iterable_name) or []
+        result = []
+        for idx, item in enumerate(items):
+            loop_ctx = context.copy()
+            loop_ctx[idx_var] = idx
+            loop_ctx[item_var] = item
+            result.append(_render_nodes(body_nodes, loop_ctx))
+        return ''.join(result)
+
+    # حالت ساده
+    m = re.match(r'^(\w+)\s+in\s+(\w+)$', header.strip())
+    if m:
+        item_var = m.group(1)
+        iterable_name = m.group(2)
+        items = context.get(iterable_name) or []
+        result = []
+        for item in items:
+            loop_ctx = context.copy()
+            loop_ctx[item_var] = item
+            result.append(_render_nodes(body_nodes, loop_ctx))
+        return ''.join(result)
+
+    # هدر نامعتبر
+    return ''
+
+
+def _render_nodes(nodes, context):
+    """رندر لیست ندهای AST با context داده‌شده.
+
+    - برای متن: replace_variables (شامل {{ }}) اعمال می‌شود.
+    - برای if: شاخه‌ی درست انتخاب و بازگشتی رندر می‌شود.
+    - برای for: تکرار روی آیتم‌ها و رندر بازگشتی بدنه.
+    """
+    result = []
+    for node in nodes:
+        if node[0] == 'text':
+            result.append(replace_variables(node[1], context))
+        elif node[0] == 'if':
+            branches = node[1]
+            chosen = None
+            for cond, body in branches:
+                if cond is None:  # else
+                    chosen = body
+                    break
+                if _eval_condition(cond, context):
+                    chosen = body
+                    break
+            if chosen is not None:
+                result.append(_render_nodes(chosen, context))
+        elif node[0] == 'for':
+            header = node[1]
+            body = node[2]
+            result.append(_render_for(header, body, context))
+    return ''.join(result)
+
+
 def render_template(template_name, context=None):
     """رندر یک قالب با context داده‌شده.
 
     از autoescape به‌صورت پیش‌فرض استفاده می‌شود.
     برای محتوای trusted می‌توان از فیلتر |safe استفاده کرد.
+
+    پیاده‌سازی با پارسر بازگشتی که درست با if/for تو در تو کار می‌کند.
     """
     if context is None:
         context = {}
@@ -171,98 +368,6 @@ def render_template(template_name, context=None):
     with open(filepath, "r", encoding="utf-8") as f:
         template = f.read()
 
-    # ====================== پردازش {% for %} ======================
-    def process_for(match):
-        loop_var = match.group(1).strip()
-        iterable_name = match.group(2).strip()
-        inner = match.group(3)
-
-        # پشتیبانی از enumerate: for i, item in enumerate(items)
-        m = re.match(r'^(\w+)\s*,\s*(\w+)\s+in\s+enumerate\((\w+)\)$',
-                     f"{loop_var}")
-        if not m:
-            m = re.match(r'^(\w+)\s*,\s*(\w+)\s+in\s+enumerate\((\w+)\)$',
-                         match.group(0).replace('{% for ', '').replace(' %}', '').strip())
-
-        if m and m.group(1) and m.group(2) and m.group(3):
-            idx_var = m.group(1)
-            item_var = m.group(2)
-            iterable_name = m.group(3)
-            items = context.get(iterable_name, []) or []
-            result = ""
-            for idx, item in enumerate(items):
-                loop_ctx = context.copy()
-                loop_ctx[idx_var] = idx
-                loop_ctx[item_var] = item
-                result += replace_variables(inner, loop_ctx)
-            return result
-
-        # حالت ساده: for item in items
-        items = context.get(iterable_name, []) or []
-        result = ""
-        for item in items:
-            loop_ctx = context.copy()
-            loop_ctx[loop_var] = item
-            result += replace_variables(inner, loop_ctx)
-        return result
-
-    template = re.sub(
-        r'\{% for\s+(.+?)\s+in\s+(\w+)\s*%\}(.*?)\{% endfor %\}',
-        process_for,
-        template,
-        flags=re.DOTALL
-    )
-
-    # ====================== پردازش {% if %} ======================
-    # پشتیبانی از if/elif/else/endif (با elif اختیاری)
-    def process_if_chain(template_text):
-        # ابتدا بلوک‌های if/endif را پیدا کن
-        pattern = re.compile(
-            r'\{% if\s+(.+?)\s*%\}(.*?)\{% endif %\}',
-            re.DOTALL
-        )
-
-        def replace_if(match):
-            condition = match.group(1).strip()
-            body = match.group(2)
-
-            # تقسیم body بر اساس elif و else
-            parts = re.split(
-                r'\{% elif\s+(.+?)\s*%\}|\{% else\s*%\}',
-                body,
-                flags=re.DOTALL
-            )
-            # parts شامل: [if_body, (elif_cond, elif_body), ..., (None, else_body)]
-            # ساخت لیست (cond, body)
-            branches = []
-            branches.append((condition, parts[0]))
-            i = 1
-            while i < len(parts) - 1:
-                elif_cond = parts[i]
-                elif_body = parts[i + 1]
-                if elif_cond is not None:
-                    branches.append((elif_cond, elif_body))
-                else:
-                    # else
-                    branches.append((None, elif_body))
-                i += 2
-
-            # ارزیابی شاخه‌ها به ترتیب
-            for cond, blk in branches:
-                if cond is None:  # else
-                    return replace_variables(blk, context)
-                if _eval_condition(cond, context):
-                    return replace_variables(blk, context)
-            return ""
-
-        return pattern.sub(replace_if, template_text)
-
-    # به‌دلیل nesting، چند بار اجرا کن
-    prev = None
-    while prev != template:
-        prev = template
-        template = process_if_chain(template)
-
-    # ====================== جایگزینی {{ var }} ======================
-    template = replace_variables(template, context)
-    return template
+    tokens = _tokenize(template)
+    nodes, _ = _parse_nodes(tokens, 0, set())
+    return _render_nodes(nodes, context)

@@ -7,7 +7,10 @@
   و حالا از طریق این لایه با user_id رندر می‌شوند.
 - logout و login-redirect هم قالب اختصاصی گرفتند تا JS بیرون فایل باشد.
 - price formatting یکپارچه.
+- is_host نیز به همه‌ی قالب‌ها پاس داده می‌شود تا navbar بتواند دکمه‌ی
+  «افزودن اقامتگاه» را فقط برای میزبان‌ها (نه مهمان‌ها) نمایش دهد.
 """
+import models
 from template_engine import render_template
 
 ICON_MAP = {
@@ -35,6 +38,24 @@ def _get_first_image(images_str):
     return images_str.split(",")[0].strip()
 
 
+def _is_host(user_id):
+    """بررسی میزبان بودن کاربر. در صورت عدم ورود، False برمی‌گرداند.
+
+    کاربرد: کنترل نمایش دکمه‌ی «افزودن اقامتگاه» در navbar.
+    """
+    if not user_id:
+        return False
+    return models.is_host(user_id)
+
+
+def _base_context(user_id):
+    """ساخت context پایه با user_id و is_host برای استفاده در همه‌ی قالب‌ها."""
+    return {
+        "user_id": user_id,
+        "is_host": _is_host(user_id),
+    }
+
+
 # ========================
 #   صفحات اصلی (عمومی)
 # ========================
@@ -49,10 +70,9 @@ def generate_home_html(featured_properties, user_id=None):
             "price_per_night": _fmt_price(p["price_per_night"]),
             "type_icon": ICON_MAP.get(p.get("property_type"), "🏠")
         })
-    return render_template("home.html", {
-        "properties": props,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["properties"] = props
+    return render_template("home.html", ctx)
 
 
 def generate_catalog_html(title, properties, user_id=None):
@@ -70,11 +90,10 @@ def generate_catalog_html(title, properties, user_id=None):
             "short_desc": (desc[:100] + "...") if len(desc) > 100 else desc,
             "type_icon": ICON_MAP.get(p.get("property_type"), "🏠")
         })
-    return render_template("catalog.html", {
-        "title": title,
-        "properties": props,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["title"] = title
+    ctx["properties"] = props
+    return render_template("catalog.html", ctx)
 
 
 def generate_property_detail(prop, comments, user_id=None):
@@ -88,12 +107,11 @@ def generate_property_detail(prop, comments, user_id=None):
         if hasattr(c, "keys"):
             c = dict(c)
         norm_comments.append(c)
-    return render_template("property_detail.html", {
-        "property": prop,
-        "comments": norm_comments,
-        "comments_count": len(norm_comments),
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["property"] = prop
+    ctx["comments"] = norm_comments
+    ctx["comments_count"] = len(norm_comments)
+    return render_template("property_detail.html", ctx)
 
 
 # ========================
@@ -102,22 +120,22 @@ def generate_property_detail(prop, comments, user_id=None):
 
 def generate_contact_page(user_id=None):
     """صفحه‌ی تماس با ما — اکنون قالب‌محور است تا navbar یکپارچه باشد."""
-    return render_template("contact.html", {"user_id": user_id})
+    return render_template("contact.html", _base_context(user_id))
 
 
 def generate_login_page(user_id=None):
     """صفحه‌ی ورود — اکنون قالب‌محور است."""
-    return render_template("login.html", {"user_id": user_id})
+    return render_template("login.html", _base_context(user_id))
 
 
 def generate_signup_page(user_id=None):
     """صفحه‌ی ثبت‌نام — اکنون قالب‌محور است."""
-    return render_template("signup.html", {"user_id": user_id})
+    return render_template("signup.html", _base_context(user_id))
 
 
 def generate_add_property_page(user_id=None):
     """صفحه‌ی درج اقامتگاه — اکنون قالب‌محور است."""
-    return render_template("add-property.html", {"user_id": user_id})
+    return render_template("add-property.html", _base_context(user_id))
 
 
 def generate_logout_page():
@@ -147,11 +165,10 @@ def generate_cart_page(cart_items, user_id=None):
             "price_per_night": _fmt_price(price)
         })
         total += float(price)
-    return render_template("cart.html", {
-        "items": items,
-        "total": _fmt_price(total),
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["items"] = items
+    ctx["total"] = _fmt_price(total)
+    return render_template("cart.html", ctx)
 
 
 def generate_wishlist_page(wishlist_items, user_id=None):
@@ -166,10 +183,9 @@ def generate_wishlist_page(wishlist_items, user_id=None):
             "price_per_night": _fmt_price(item["price_per_night"]),
             "image_url": img
         })
-    return render_template("wishlist.html", {
-        "items": items,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["items"] = items
+    return render_template("wishlist.html", ctx)
 
 
 # ========================
@@ -188,41 +204,37 @@ def generate_table_html(title, columns, rows, user_id=None):
         if hasattr(r, "keys"):
             r = dict(r)
         norm_rows.append(r)
-    return render_template("table.html", {
-        "title": title,
-        "columns": columns,
-        "rows": norm_rows,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["title"] = title
+    ctx["columns"] = columns
+    ctx["rows"] = norm_rows
+    return render_template("table.html", ctx)
 
 
 def generate_edit_user_form(user, user_id=None):
     """user باید dict باشد."""
     if hasattr(user, "keys"):
         user = dict(user)
-    return render_template("edit_user.html", {
-        "user": user,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["user"] = user
+    return render_template("edit_user.html", ctx)
 
 
 def generate_edit_property_form(property_data, user_id=None):
     if hasattr(property_data, "keys"):
         property_data = dict(property_data)
-    return render_template("edit_property.html", {
-        "property": property_data,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["property"] = property_data
+    return render_template("edit_property.html", ctx)
 
 
 def generate_message_detail(message_data, user_id=None):
     if hasattr(message_data, "keys"):
         message_data = dict(message_data)
     message_data["read_status"] = "خوانده شده" if message_data.get("is_read") else "خوانده نشده"
-    return render_template("message_detail.html", {
-        "message": message_data,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["message"] = message_data
+    return render_template("message_detail.html", ctx)
 
 
 # ========================
@@ -244,9 +256,8 @@ def generate_error_page(status_code, message="", user_id=None):
     else:
         title = "خطا"
         desc = message or "خطایی رخ داده است."
-    return render_template("error.html", {
-        "code": status_code,
-        "title": title,
-        "description": desc,
-        "user_id": user_id
-    })
+    ctx = _base_context(user_id)
+    ctx["code"] = status_code
+    ctx["title"] = title
+    ctx["description"] = desc
+    return render_template("error.html", ctx)

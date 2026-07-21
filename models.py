@@ -9,6 +9,8 @@
 - توابع get_user_by_email، get_user_with_role اضافه شد.
 - توابع create_session و get_user_by_session با مدیریت انقضا.
 - استفاده از context manager برای جلوگیری از connection leak.
+- is_admin به‌صورت Boolean (در ساخت کاربر) استفاده می‌شود.
+- توابع get_user_account_type و is_host برای کنترل دسترسی میزبان/مهمان.
 """
 import sqlite3
 import uuid
@@ -59,12 +61,21 @@ def get_user_by_email(email):
     return _dict(row)
 
 
-def create_user(first_name, last_name, email, password_hash, account_type, phone=None, is_admin=0):
+def create_user(first_name, last_name, email, password_hash, account_type,
+                phone=None, is_admin=False):
+    """ساخت کاربر جدید.
+
+    پارامترها:
+      is_admin: bool (پیش‌فرض False).
+                در DB به‌صورت 0/1 ذخیره می‌شود (SQLite BOOLEAN هم‌معنی INTEGER است).
+    """
+    # تبدیل bool به 0/1 برای ذخیره در SQLite
+    is_admin_val = 1 if is_admin else 0
     with get_db() as conn:
         conn.execute(
             "INSERT INTO users (first_name, last_name, email, phone, password, account_type, is_admin) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (first_name, last_name, email, phone, password_hash, account_type, is_admin)
+            (first_name, last_name, email, phone, password_hash, account_type, is_admin_val)
         )
         conn.commit()
 
@@ -79,11 +90,41 @@ def update_user(user_id, first_name, last_name, email, account_type, phone=None)
 
 
 def is_admin(user_id):
+    """بررسی اینکه آیا کاربر admin است یا نه. خروجی همیشه bool است."""
     if not user_id:
         return False
     with get_db() as conn:
-        row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
-    return bool(row and row["is_admin"])
+        row = conn.execute(
+            "SELECT is_admin FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    if not row:
+        return False
+    # SQLite ممکن است 0/1 یا True/False برگرداند؛ در هر صورت bool می‌سازیم
+    val = row["is_admin"]
+    return bool(val) and val != 0
+
+
+def get_user_account_type(user_id):
+    """گرفتن نوع حساب کاربر ('guest' یا 'host').
+
+    اگر کاربر وجود نداشت یا وارد نشده بود، None برمی‌گرداند.
+    کاربرد: کنترل دسترسی به دکمه‌ی «افزودن اقامتگاه» در navbar
+    که فقط باید برای میزبان‌ها نمایش داده شود.
+    """
+    if not user_id:
+        return None
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT account_type FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    if not row:
+        return None
+    return row["account_type"]
+
+
+def is_host(user_id):
+    """بررسی اینکه آیا کاربر میزبان است یا نه. خروجی همیشه bool است."""
+    return get_user_account_type(user_id) == 'host'
 
 
 # ===================== اقامتگاه‌ها =====================

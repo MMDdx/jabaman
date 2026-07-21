@@ -32,18 +32,24 @@ def seed():
     cursor = conn.cursor()
 
     # ۳. کاربران نمونه — حالا با ایمیل
+    # is_admin به‌صورت Boolean (True/False) — در DB به‌صورت 0/1 ذخیره می‌شود
     users = [
         # (first, last, email, phone, password_hash, account_type, is_admin)
-        ("علی", "محمدی", "ali@example.com", "09123456789", hash_password("12345678"), "host", 0),
-        ("مریم", "احمدی", "maryam@example.com", "09187654321", hash_password("87654321"), "guest", 0),
-        ("رضا", "کریمی", "reza@example.com", "09351234567", hash_password("password123"), "host", 0),
-        ("سارا", "نیکپور", "sara@example.com", "09121112222", hash_password("sara1234"), "guest", 0),
-        ("ادمین", "سیستم", "admin@example.com", "09120000000", hash_password("admin1234"), "host", 1),
+        ("علی", "محمدی", "ali@example.com", "09123456789", hash_password("12345678"), "host", False),
+        ("مریم", "احمدی", "maryam@example.com", "09187654321", hash_password("87654321"), "guest", False),
+        ("رضا", "کریمی", "reza@example.com", "09351234567", hash_password("password123"), "host", False),
+        ("سارا", "نیکپور", "sara@example.com", "09121112222", hash_password("sara1234"), "guest", False),
+        ("ادمین", "سیستم", "admin@example.com", "09120000000", hash_password("admin1234"), "host", True),
+    ]
+    # تبدیل bool به 0/1 برای SQLite
+    users_for_db = [
+        (f, l, e, p, ph, at, 1 if ia else 0)
+        for (f, l, e, p, ph, at, ia) in users
     ]
     cursor.executemany(
         "INSERT OR IGNORE INTO users (first_name, last_name, email, phone, password, account_type, is_admin) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        users
+        users_for_db
     )
 
     # ۴. اقامتگاه‌های نمونه
