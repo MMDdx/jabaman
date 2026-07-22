@@ -25,6 +25,7 @@ from views import (
     generate_login_redirect_page,
     generate_contact_page, generate_login_page, generate_signup_page,
     generate_add_property_page, generate_logout_page,
+    generate_admin_dashboard,
 )
 
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
@@ -256,34 +257,106 @@ def process_get(path, user_id=None):
         return Response.html(200, generate_wishlist_page(items, user_id))
 
     # ---------- مسیرهای ادمین ----------
+    if path == "/admin":
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        stats = models.get_admin_stats()
+        # آخرین پیام‌ها و نظرات برای داشبورد
+        recent_messages = models.get_all_messages()[:5]
+        recent_comments = models.get_all_comments()[:5]
+        return Response.html(200, generate_admin_dashboard(
+            stats, recent_messages, recent_comments, user_id
+        ))
+
     if path == "/admin/users":
         if not _require_admin(user_id):
             return Response.forbidden(user_id)
         users = models.get_all_users()
+        # نگاشت کلیدهای انگلیسی dict به کلیدهای فارسی مطابق با عناوین ستون‌ها
+        formatted = []
+        for u in users:
+            row = dict(u)
+            row["شناسه"] = u.get("id")
+            row["نام"] = u.get("first_name")
+            row["نام خانوادگی"] = u.get("last_name")
+            row["ایمیل"] = u.get("email")
+            row["موبایل"] = u.get("phone") or "—"
+            row["نوع حساب"] = "میزبان" if u.get("account_type") == "host" else "مهمان"
+            row["ادمین"] = "بله" if u.get("is_admin") else "—"
+            row["تاریخ ثبت‌نام"] = u.get("created_at")
+            formatted.append(row)
         return Response.html(200, generate_table_html(
             "کاربران",
             ["شناسه", "نام", "نام خانوادگی", "ایمیل", "موبایل", "نوع حساب", "ادمین", "تاریخ ثبت‌نام"],
-            users, user_id
+            formatted, user_id
         ))
 
     if path == "/admin/messages":
         if not _require_admin(user_id):
             return Response.forbidden(user_id)
         messages = models.get_all_messages()
+        formatted = []
+        for m in messages:
+            row = dict(m)
+            row["شناسه"] = m.get("id")
+            row["فرستنده"] = m.get("fullname")
+            row["ایمیل"] = m.get("email") or "—"
+            row["تلفن"] = m.get("phone") or "—"
+            row["موضوع"] = m.get("topic") or "—"
+            # متن کامل پیام در صفحه‌ی جزئیات است؛ اینجا فقط پیش‌نمایش کوتاه
+            text = m.get("message_text") or ""
+            row["متن"] = (text[:60] + "…") if len(text) > 60 else text
+            row["خوانده‌شده"] = "✓ بله" if m.get("is_read") else "✗ خیر"
+            row["تاریخ"] = m.get("created_at")
+            formatted.append(row)
         return Response.html(200, generate_table_html(
             "پیام‌ها",
             ["شناسه", "فرستنده", "ایمیل", "تلفن", "موضوع", "متن", "خوانده‌شده", "تاریخ"],
-            messages, user_id
+            formatted, user_id
         ))
 
     if path == "/admin/properties":
         if not _require_admin(user_id):
             return Response.forbidden(user_id)
         properties = models.get_all_properties()
+        formatted = []
+        for p in properties:
+            row = dict(p)
+            row["شناسه"] = p.get("id")
+            row["میزبان"] = p.get("host_id")
+            row["عنوان"] = p.get("title")
+            row["نوع"] = p.get("property_type")
+            row["موقعیت"] = p.get("location")
+            row["قیمت/شب"] = f"{float(p.get('price_per_night') or 0):,.0f}"
+            row["ظرفیت"] = p.get("max_guests")
+            row["اتاق"] = p.get("bedrooms")
+            row["سرویس"] = p.get("bathrooms")
+            row["تاریخ ثبت"] = p.get("created_at")
+            formatted.append(row)
         return Response.html(200, generate_table_html(
             "اقامتگاه‌ها",
             ["شناسه", "میزبان", "عنوان", "نوع", "موقعیت", "قیمت/شب", "ظرفیت", "اتاق", "سرویس", "تاریخ ثبت"],
-            properties, user_id
+            formatted, user_id
+        ))
+
+    if path == "/admin/comments":
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        comments = models.get_all_comments()
+        formatted = []
+        for c in comments:
+            row = dict(c)
+            row["شناسه"] = c.get("id")
+            row["کاربر"] = c.get("user_name")
+            row["اقامتگاه"] = c.get("property_title")
+            row["متن نظر"] = c.get("comment_text")
+            row["امتیاز"] = f"{c.get('rating', 0)} ★"
+            row["تاریخ"] = c.get("created_at")
+            formatted.append(row)
+        return Response.html(200, generate_table_html(
+            "نظرات",
+            ["شناسه", "کاربر", "اقامتگاه", "متن نظر", "امتیاز", "تاریخ"],
+            formatted, user_id
         ))
 
     # ---------- مسیرهای داینامیک ----------
@@ -323,6 +396,43 @@ def process_get(path, user_id=None):
         if not prop:
             return Response.html(404, generate_error_page(404, user_id=user_id))
         return Response.html(200, generate_edit_property_form(prop, user_id))
+
+    # ---------- مسیرهای حذف (ادمین) ----------
+    # حذف اقامتگاه
+    params = match_route(path, "/admin/properties/<int:id>/delete")
+    if params:
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        models.delete_property(params['id'])
+        return Response.redirect("/admin/properties")
+
+    # حذف کاربر
+    params = match_route(path, "/admin/users/<int:id>/delete")
+    if params:
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        # جلوگیری از حذف خود کاربر فعلی (اختیاری)
+        if params['id'] == user_id:
+            return Response.html(400, "نمی‌توانید حساب خودتان را حذف کنید. "
+                                     "<a href='/admin/users'>بازگشت</a>")
+        models.delete_user(params['id'])
+        return Response.redirect("/admin/users")
+
+    # حذف پیام
+    params = match_route(path, "/admin/messages/<int:id>/delete")
+    if params:
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        models.delete_message(params['id'])
+        return Response.redirect("/admin/messages")
+
+    # حذف نظر
+    params = match_route(path, "/admin/comments/<int:id>/delete")
+    if params:
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        models.delete_comment(params['id'])
+        return Response.redirect("/admin/comments")
 
     # ---------- حذف آیتم از cart/wishlist ----------
     params = match_route(path, "/cart/<int:id>/remove")

@@ -27,6 +27,7 @@
             <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
             <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
             {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
+            {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
             <a href="/logout" class="btn-primary btn-sm">خروج</a>
             {% else %}
             <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>

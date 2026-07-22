@@ -48,11 +48,22 @@ def _is_host(user_id):
     return models.is_host(user_id)
 
 
+def _is_admin(user_id):
+    """بررسی ادمین بودن کاربر. در صورت عدم ورود، False برمی‌گرداند.
+
+    کاربرد: کنترل نمایش دکمه‌ی «پنل مدیریت» در navbar صفحات عمومی.
+    """
+    if not user_id:
+        return False
+    return models.is_admin(user_id)
+
+
 def _base_context(user_id):
-    """ساخت context پایه با user_id و is_host برای استفاده در همه‌ی قالب‌ها."""
+    """ساخت context پایه با user_id، is_host و is_admin برای استفاده در همه‌ی قالب‌ها."""
     return {
         "user_id": user_id,
         "is_host": _is_host(user_id),
+        "is_admin": _is_admin(user_id),
     }
 
 
@@ -191,6 +202,15 @@ def generate_wishlist_page(wishlist_items, user_id=None):
 # ========================
 #   صفحات ادمین
 # ========================
+
+def generate_admin_dashboard(stats, recent_messages, recent_comments, user_id=None):
+    """داشبورد اصلی ادمین — نمایش آمار کلی + آخرین پیام‌ها و نظرات."""
+    ctx = _base_context(user_id)
+    ctx["stats"] = stats
+    ctx["recent_messages"] = recent_messages or []
+    ctx["recent_comments"] = recent_comments or []
+    return render_template("admin_dashboard.html", ctx)
+
 
 def generate_table_html(title, columns, rows, user_id=None):
     """ساخت جدول ادمین.

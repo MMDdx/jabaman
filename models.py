@@ -199,6 +199,15 @@ def delete_property(property_id):
         conn.commit()
 
 
+def delete_user(user_id):
+    """حذف کاربر — به‌خاطر ON DELETE CASCADE در جداول وابسته،
+    اقامتگاه‌ها، نظرات، سبد و علاقه‌مندی‌های او هم حذف می‌شوند.
+    """
+    with get_db() as conn:
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+
+
 # ===================== پیام‌ها =====================
 
 def get_all_messages():
@@ -235,6 +244,12 @@ def mark_message_read(message_id, is_read=True):
         conn.commit()
 
 
+def delete_message(message_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+        conn.commit()
+
+
 # ===================== نظرات =====================
 
 def get_comments_for_property(property_id):
@@ -247,6 +262,35 @@ def get_comments_for_property(property_id):
             (property_id,)
         ).fetchall()
     return [_dict(r) for r in rows]
+
+
+def get_all_comments():
+    """گرفتن همه‌ی نظرات (برای پنل ادمین) به‌همراه نام کاربر و عنوان اقامتگاه."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT c.id, c.user_id, c.property_id, c.comment_text, c.rating, c.created_at, "
+            "       u.first_name || ' ' || u.last_name AS user_name, "
+            "       p.title AS property_title "
+            "FROM comments c "
+            "JOIN users u ON c.user_id = u.id "
+            "JOIN properties p ON c.property_id = p.id "
+            "ORDER BY c.created_at DESC"
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
+
+def get_comment(comment_id):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM comments WHERE id = ?", (comment_id,)
+        ).fetchone()
+    return _dict(row)
+
+
+def delete_comment(comment_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+        conn.commit()
 
 
 def add_comment(user_id, property_id, comment_text, rating):
@@ -380,3 +424,28 @@ def secrets_safe_uuid():
     """تولید UUID امن با secrets (به‌جای uuid.uuid4 که امن نیست)."""
     import secrets as _s
     return str(_s.token_hex(16))
+
+
+# ===================== داشبورد ادمین =====================
+
+def get_admin_stats():
+    """گرفتن آمار کلی برای داشبورد ادمین."""
+    with get_db() as conn:
+        users_count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
+        properties_count = conn.execute("SELECT COUNT(*) AS c FROM properties").fetchone()["c"]
+        messages_count = conn.execute("SELECT COUNT(*) AS c FROM messages").fetchone()["c"]
+        unread_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM messages WHERE is_read = 0"
+        ).fetchone()["c"]
+        comments_count = conn.execute("SELECT COUNT(*) AS c FROM comments").fetchone()["c"]
+        hosts_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM users WHERE account_type = 'host'"
+        ).fetchone()["c"]
+    return {
+        "users": users_count,
+        "properties": properties_count,
+        "messages": messages_count,
+        "unread_messages": unread_count,
+        "comments": comments_count,
+        "hosts": hosts_count,
+    }

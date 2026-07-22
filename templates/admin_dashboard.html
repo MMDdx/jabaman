@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد مدیریت | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            {% if user_id %}
+            <a href="/admin"><i class="fas fa-tachometer-alt"></i> داشبورد</a>
+            <a href="/admin/users"><i class="fas fa-users"></i> کاربران</a>
+            <a href="/admin/properties"><i class="fas fa-building"></i> اقامتگاه‌ها</a>
+            <a href="/admin/comments"><i class="fas fa-comments"></i> نظرات</a>
+            <a href="/admin/messages"><i class="fas fa-envelope"></i> پیام‌ها</a>
+            <a href="/" class="btn-ghost btn-sm"><i class="fas fa-globe"></i> مشاهده سایت</a>
+            <a href="/logout" class="btn-primary btn-sm"><i class="fas fa-sign-out-alt"></i> خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
+<div class="admin-dashboard-container">
+    <div class="page-header">
+        <h1><i class="fas fa-tachometer-alt" style="color:var(--primary);"></i> داشبورد مدیریت</h1>
+        <p>نمای کلی از وضعیت پلتفرم جابامن</p>
+    </div>
+
+    <!-- کارت‌های آماری -->
+    <div class="stats-grid">
+        <a href="/admin/users" class="stat-card stat-card-primary">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">کاربران</span>
+                <span class="stat-value">{{ stats.users }}</span>
+                <span class="stat-sub">شامل {{ stats.hosts }} میزبان</span>
+            </div>
+        </a>
+        <a href="/admin/properties" class="stat-card stat-card-accent">
+            <div class="stat-icon"><i class="fas fa-building"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">اقامتگاه‌ها</span>
+                <span class="stat-value">{{ stats.properties }}</span>
+                <span class="stat-sub">در پلتفرم ثبت شده</span>
+            </div>
+        </a>
+        <a href="/admin/comments" class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="fas fa-comments"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">نظرات</span>
+                <span class="stat-value">{{ stats.comments }}</span>
+                <span class="stat-sub">کاربران ثبت کرده‌اند</span>
+            </div>
+        </a>
+        <a href="/admin/messages" class="stat-card stat-card-warning">
+            <div class="stat-icon"><i class="fas fa-envelope"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">پیام‌ها</span>
+                <span class="stat-value">{{ stats.messages }}</span>
+                {% if stats.unread_messages > 0 %}
+                <span class="stat-sub" style="color:var(--danger);font-weight:600;">
+                    <i class="fas fa-circle" style="font-size:0.5rem;"></i> {{ stats.unread_messages }} خوانده‌نشده
+                </span>
+                {% else %}
+                <span class="stat-sub">همه خوانده شده‌اند</span>
+                {% endif %}
+            </div>
+        </a>
+    </div>
+
+    <!-- آخرین فعالیت‌ها -->
+    <div class="dashboard-columns">
+        <div class="dashboard-panel">
+            <div class="panel-header">
+                <h2><i class="fas fa-envelope" style="color:var(--warning);"></i> آخرین پیام‌ها</h2>
+                <a href="/admin/messages" class="panel-link">مشاهده همه ←</a>
+            </div>
+            {% if recent_messages %}
+            <ul class="recent-list">
+                {% for msg in recent_messages %}
+                <li class="recent-item">
+                    <a href="/message/{{ msg.id }}" class="recent-link">
+                        <div class="recent-icon {% if msg.is_read %}icon-read{% else %}icon-unread{% endif %}">
+                            <i class="fas {% if msg.is_read %}fa-envelope-open{% else %}fa-envelope{% endif %}"></i>
+                        </div>
+                        <div class="recent-content">
+                            <div class="recent-title">{{ msg.fullname }} <small style="color:var(--text-muted);">— {{ msg.topic }}</small></div>
+                            <div class="recent-meta">{{ msg.message_text }}</div>
+                            <small class="recent-date">{{ msg.created_at }}</small>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>هنوز پیامی ثبت نشده است.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-panel">
+            <div class="panel-header">
+                <h2><i class="fas fa-comments" style="color:var(--success);"></i> آخرین نظرات</h2>
+                <a href="/admin/comments" class="panel-link">مشاهده همه ←</a>
+            </div>
+            {% if recent_comments %}
+            <ul class="recent-list">
+                {% for c in recent_comments %}
+                <li class="recent-item">
+                    <a href="/property/{{ c.property_id }}" class="recent-link">
+                        <div class="recent-icon icon-comment">
+                            <i class="fas fa-comment"></i>
+                        </div>
+                        <div class="recent-content">
+                            <div class="recent-title">
+                                {{ c.user_name }}
+                                <span class="rating-badge">{{ c.rating }} ★</span>
+                            </div>
+                            <div class="recent-meta">{{ c.comment_text }}</div>
+                            <small class="recent-date">روی «{{ c.property_title }}» — {{ c.created_at }}</small>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-comment-slash"></i>
+                <p>هنوز نظری ثبت نشده است.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- میانبرهای سریع -->
+    <div class="quick-actions">
+        <h2><i class="fas fa-bolt" style="color:var(--accent);"></i> میانبرهای سریع</h2>
+        <div class="quick-actions-grid">
+            <a href="/admin/users" class="quick-action-card">
+                <i class="fas fa-user-cog" style="color:var(--primary);"></i>
+                <span>مدیریت کاربران</span>
+            </a>
+            <a href="/admin/properties" class="quick-action-card">
+                <i class="fas fa-building" style="color:var(--accent);"></i>
+                <span>مدیریت اقامتگاه‌ها</span>
+            </a>
+            <a href="/admin/comments" class="quick-action-card">
+                <i class="fas fa-comment-dots" style="color:var(--success);"></i>
+                <span>مدیریت نظرات</span>
+            </a>
+            <a href="/admin/messages" class="quick-action-card">
+                <i class="fas fa-inbox" style="color:var(--warning);"></i>
+                <span>صندوق پیام‌ها</span>
+            </a>
+        </div>
+    </div>
+</div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

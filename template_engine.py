@@ -56,6 +56,7 @@ def _resolve_expr(expr, context):
     - فیلتر length: {{ list|length }}
     - ایندکس عددی: {{ items.0 }}
     - فیلتر safe: {{ var|safe }} (در replace_variables هندل می‌شود)
+    - دسترسی با براکت: {{ obj[key] }} یا {{ obj["key"] }} (پویا)
     """
     expr = expr.strip()
 
@@ -72,6 +73,30 @@ def _resolve_expr(expr, context):
                 return "0"
         # فیلترهای دیگر (از جمله safe که در replace_variables هندل می‌شود)
         return str(val) if val is not None else ""
+
+    # دسترسی با براکت: obj[key] یا obj["key"] یا obj['key']
+    # (باید آخرین شاخص باشد، نه در میان expr)
+    bracket_match = re.match(r'^(\w+)\s*\[\s*(.+?)\s*\]$', expr)
+    if bracket_match:
+        obj_name = bracket_match.group(1)
+        key_expr = bracket_match.group(2)
+        obj = context.get(obj_name)
+        # حل مقدار کلید
+        if (key_expr.startswith('"') and key_expr.endswith('"')) or \
+           (key_expr.startswith("'") and key_expr.endswith("'")):
+            key = key_expr[1:-1]
+        else:
+            key = _resolve_expr(key_expr, context)
+        if obj is None:
+            return ""
+        if isinstance(obj, Mapping):
+            return obj.get(key, "") or ""
+        if hasattr(obj, "keys"):
+            try:
+                return obj[key] or ""
+            except (KeyError, IndexError):
+                return ""
+        return ""
 
     # دسترسی با نقطه
     if "." in expr:
