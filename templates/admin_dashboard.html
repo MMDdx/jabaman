@@ -78,6 +78,22 @@
                 {% endif %}
             </div>
         </a>
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">رزروهای فعال</span>
+                <span class="stat-value">{{ stats.reservations }}</span>
+                <span class="stat-sub">{{ stats.reserved_properties }} اقامتگاه رزرو شده</span>
+            </div>
+        </div>
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="stat-body">
+                <span class="stat-label">درآمد کل (تومان)</span>
+                <span class="stat-value">{{ stats.total_revenue_fmt }}</span>
+                <span class="stat-sub">از رزروهای تاییدشده</span>
+            </div>
+        </div>
     </div>
 
     <!-- آخرین فعالیت‌ها -->

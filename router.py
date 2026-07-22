@@ -26,6 +26,8 @@ from views import (
     generate_contact_page, generate_login_page, generate_signup_page,
     generate_add_property_page, generate_logout_page,
     generate_admin_dashboard,
+    generate_checkout_page, generate_checkout_success_page,
+    generate_reservations_page,
 )
 
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
@@ -250,6 +252,20 @@ def process_get(path, user_id=None):
         items = models.get_cart_items(user_id)
         return Response.html(200, generate_cart_page(items, user_id))
 
+    if path == "/checkout":
+        if not _require_login(user_id):
+            return Response.login_required()
+        items = models.get_cart_items(user_id)
+        if not items:
+            return Response.redirect("/cart")
+        return Response.html(200, generate_checkout_page(items, user_id))
+
+    if path == "/reservations":
+        if not _require_login(user_id):
+            return Response.login_required()
+        reservations = models.get_user_reservations(user_id)
+        return Response.html(200, generate_reservations_page(reservations, user_id))
+
     if path == "/wishlist":
         if not _require_login(user_id):
             return Response.login_required()
@@ -449,6 +465,16 @@ def process_get(path, user_id=None):
         models.remove_from_wishlist(user_id, params['id'])
         return Response.redirect("/wishlist")
 
+    # ---------- لغو رزرو ----------
+    params = match_route(path, "/reservation/<int:id>/cancel")
+    if params:
+        if not _require_login(user_id):
+            return Response.login_required()
+        ok, err = models.cancel_reservation(params['id'], user_id=user_id)
+        if not ok:
+            return Response.html(400, generate_error_page(400, err, user_id))
+        return Response.redirect("/reservations")
+
     return None
 
 
@@ -477,6 +503,10 @@ def process_post(path, body, user_id=None, headers=None):
         if not _require_login(user_id):
             return Response.login_required()
         return handle_add_to_cart(params, user_id)
+    if path == "/checkout":
+        if not _require_login(user_id):
+            return Response.login_required()
+        return handle_checkout(params, user_id)
     if path == "/wishlist/add":
         if not _require_login(user_id):
             return Response.login_required()
@@ -738,14 +768,98 @@ def handle_edit_property(params, property_id):
 
 
 def handle_add_to_cart(params, user_id):
+    """افزودن اقامتگاه به سبد با تاریخ ورود/خروج و تعداد مهمان.
+
+    فیلدهای مورد انتظار:
+    - property_id (الزامی)
+    - check_in_date (YYYY-MM-DD)
+    - check_out_date (YYYY-MM-DD)
+    - guests (عدد)
+    """
     property_id = params.get('property_id', [None])[0]
+    check_in = params.get('check_in_date', [None])[0]
+    check_out = params.get('check_out_date', [None])[0]
+    guests = params.get('guests', ['1'])[0]
+
     if not property_id:
         return Response.html(400, "شناسه اقامتگاه الزامی است")
+
+    # اعتبارسنجی تاریخ‌ها
+    from datetime import datetime as _dt
     try:
-        models.add_to_cart(user_id, property_id)
+        if check_in:
+            _dt.strptime(check_in, "%Y-%m-%d")
+        if check_out:
+            _dt.strptime(check_out, "%Y-%m-%d")
+    except ValueError:
+        return Response.html(400, "فرمت تاریخ نامعتبر است. لطفاً از تقویم استفاده کنید.")
+
+    if check_in and check_out and check_out <= check_in:
+        return Response.html(400, "تاریخ خروج باید بعد از تاریخ ورود باشد.")
+
+    try:
+        guests_int = int(guests or 1)
+        if guests_int < 1:
+            guests_int = 1
+    except ValueError:
+        guests_int = 1
+
+    try:
+        models.add_to_cart(user_id, property_id, check_in, check_out, guests_int)
         return Response.redirect("/cart")
     except Exception as e:
         return Response.html(500, generate_error_page(500, str(e)))
+
+
+def handle_checkout(params, user_id):
+    """پرداخت نهایی — برای هر آیتم سبد، یک رزرو ایجاد می‌کند.
+
+    مراحل:
+    1. گرفتن آیتم‌های سبد خرید کاربر.
+    2. برای هر آیتم، بررسی در دسترس بودن اقامتگاه و ایجاد رزرو.
+    3. در صورت خطا برای یک آیتم، رزرو بقیه انجام می‌شود و خطا به کاربر نشان داده می‌شود.
+    4. در صورت موفقیت کامل، سبد خرید پاک می‌شود و به صفحه‌ی موفقیت هدایت می‌شود.
+    """
+    items = models.get_cart_items(user_id)
+    if not items:
+        return Response.redirect("/cart")
+
+    created_reservations = []
+    errors = []
+
+    for item in items:
+        property_id = item.get("property_id")
+        check_in = item.get("check_in_date")
+        check_out = item.get("check_out_date")
+        guests = item.get("guests") or 1
+        title = item.get("title") or f"#{property_id}"
+
+        if not check_in or not check_out:
+            errors.append(f"برای «{title}» تاریخ ورود و خروج مشخص نشده است.")
+            continue
+
+        reservation_id, err = models.create_reservation(
+            user_id, property_id, check_in, check_out, guests
+        )
+        if err:
+            errors.append(f"برای «{title}»: {err}")
+        else:
+            created_reservations.append(reservation_id)
+
+    # پاک کردن آیتم‌های سبد که رزرو شدند
+    if created_reservations:
+        models.clear_cart(user_id)
+
+    if errors and not created_reservations:
+        # همه‌ی آیتم‌ها خطا داشتند
+        return Response.html(400, generate_error_page(
+            400, "؛ ".join(errors), user_id
+        ))
+
+    # موفقیت (کامل یا جزئی) — نمایش صفحه‌ی موفقیت
+    return Response.html(200, generate_checkout_success_page(
+        created_reservations, errors, user_id
+    ))
 
 
 def handle_add_to_wishlist(params, user_id):

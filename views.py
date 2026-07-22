@@ -112,6 +112,20 @@ def generate_property_detail(prop, comments, user_id=None):
     if hasattr(prop, "keys"):
         prop = dict(prop)
     prop["price_per_night_fmt"] = _fmt_price(prop.get("price_per_night"))
+    # نمایش وضعیت رزرو
+    prop["is_reserved"] = bool(prop.get("is_reserved"))
+    # محاسبه‌ی حداکثر مهمان مجاز (۳ برابر ظرفیت استاندارد)
+    try:
+        mg = int(prop.get("max_guests") or 1)
+    except (TypeError, ValueError):
+        mg = 1
+    prop["max_guests_x3"] = mg * 3
+    # گرفتن رزروهای آینده‌ی این اقامتگاه برای نمایش در صفحه
+    upcoming_reservations = []
+    try:
+        upcoming_reservations = models.get_reservations_for_property(prop.get("id"))
+    except Exception:
+        pass
     # نرمال‌سازی comments
     norm_comments = []
     for c in comments:
@@ -122,6 +136,9 @@ def generate_property_detail(prop, comments, user_id=None):
     ctx["property"] = prop
     ctx["comments"] = norm_comments
     ctx["comments_count"] = len(norm_comments)
+    ctx["upcoming_reservations"] = upcoming_reservations
+    ctx["extra_guest_charge"] = models.EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT
+    ctx["extra_guest_charge_fmt"] = _fmt_price(models.EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT)
     return render_template("property_detail.html", ctx)
 
 
@@ -164,22 +181,113 @@ def generate_login_redirect_page():
 # ========================
 
 def generate_cart_page(cart_items, user_id=None):
+    """ساخت صفحه‌ی سبد خرید با نمایش تاریخ‌ها، تعداد مهمان و قیمت محاسبه‌شده."""
     items = []
-    total = 0
+    grand_total = 0
     for item in cart_items:
-        price = item.get("price_per_night") or 0
+        total = float(item.get("total_price") or 0)
+        grand_total += total
+        extra_guests = item.get("extra_guests") or 0
         items.append({
             "cart_id": item.get("cart_id"),
+            "property_id": item.get("property_id"),
             "id": item.get("id"),
-            "title": item["title"],
-            "location": item["location"],
-            "price_per_night": _fmt_price(price)
+            "title": item.get("title"),
+            "location": item.get("location"),
+            "price_per_night": _fmt_price(item.get("price_per_night")),
+            "check_in_date": item.get("check_in_date") or "—",
+            "check_out_date": item.get("check_out_date") or "—",
+            "guests": item.get("guests") or 1,
+            "max_guests": item.get("max_guests"),
+            "nights": item.get("nights") or 1,
+            "base_price": _fmt_price(item.get("base_price")),
+            "extra_guests": extra_guests,
+            "has_extra_guests": extra_guests > 0,
+            "extra_guest_charge": _fmt_price(item.get("extra_guest_charge")),
+            "total_price": _fmt_price(total),
+            "is_reserved": bool(item.get("is_reserved")),
         })
-        total += float(price)
     ctx = _base_context(user_id)
     ctx["items"] = items
-    ctx["total"] = _fmt_price(total)
+    ctx["total"] = _fmt_price(grand_total)
     return render_template("cart.html", ctx)
+
+
+def generate_checkout_page(cart_items, user_id=None):
+    """صفحه‌ی تأیید نهایی خرید — نمایش خلاصه‌ی رزروها و دکمه‌ی تأیید."""
+    items = []
+    grand_total = 0
+    for item in cart_items:
+        total = float(item.get("total_price") or 0)
+        grand_total += total
+        extra_guests = item.get("extra_guests") or 0
+        items.append({
+            "property_id": item.get("property_id"),
+            "title": item.get("title"),
+            "location": item.get("location"),
+            "check_in_date": item.get("check_in_date") or "—",
+            "check_out_date": item.get("check_out_date") or "—",
+            "guests": item.get("guests") or 1,
+            "nights": item.get("nights") or 1,
+            "base_price": _fmt_price(item.get("base_price")),
+            "extra_guests": extra_guests,
+            "has_extra_guests": extra_guests > 0,
+            "extra_guest_charge": _fmt_price(item.get("extra_guest_charge")),
+            "total_price": _fmt_price(total),
+        })
+    ctx = _base_context(user_id)
+    ctx["items"] = items
+    ctx["total"] = _fmt_price(grand_total)
+    ctx["count"] = len(items)
+    return render_template("checkout.html", ctx)
+
+
+def generate_checkout_success_page(reservation_ids, errors, user_id=None):
+    """صفحه‌ی موفقیت پس از ایجاد رزرو(ها)."""
+    ctx = _base_context(user_id)
+    ctx["reservation_ids"] = reservation_ids or []
+    ctx["errors"] = errors or []
+    ctx["success_count"] = len(reservation_ids or [])
+    ctx["has_errors"] = bool(errors)
+    return render_template("checkout_success.html", ctx)
+
+
+def generate_reservations_page(reservations, user_id=None):
+    """صفحه‌ی «رزروهای من» — لیست رزروهای کاربر با امکان لغو."""
+    items = []
+    for r in reservations:
+        if hasattr(r, "keys"):
+            r = dict(r)
+        extra_guests = r.get("extra_guests") or 0
+        status = r.get("status") or "confirmed"
+        items.append({
+            "id": r.get("id"),
+            "property_id": r.get("property_id"),
+            "property_title": r.get("property_title") or "—",
+            "property_location": r.get("property_location") or "—",
+            "check_in_date": r.get("check_in_date") or "—",
+            "check_out_date": r.get("check_out_date") or "—",
+            "guests": r.get("guests") or 1,
+            "extra_guests": extra_guests,
+            "has_extra_guests": extra_guests > 0,
+            "extra_guest_charge": _fmt_price(r.get("extra_guest_charge")),
+            "nights": r.get("nights") or 1,
+            "base_price": _fmt_price(r.get("base_price")),
+            "total_price": _fmt_price(r.get("total_price")),
+            "status": status,
+            "status_fa": {
+                "confirmed": "تایید شده",
+                "cancelled": "لغو شده",
+                "completed": "تکمیل شده",
+            }.get(status, status),
+            "is_confirmed": status == "confirmed",
+            "is_cancelled": status == "cancelled",
+            "is_completed": status == "completed",
+            "created_at": r.get("created_at"),
+        })
+    ctx = _base_context(user_id)
+    ctx["reservations"] = items
+    return render_template("reservations.html", ctx)
 
 
 def generate_wishlist_page(wishlist_items, user_id=None):
@@ -205,6 +313,12 @@ def generate_wishlist_page(wishlist_items, user_id=None):
 
 def generate_admin_dashboard(stats, recent_messages, recent_comments, user_id=None):
     """داشبورد اصلی ادمین — نمایش آمار کلی + آخرین پیام‌ها و نظرات."""
+    # پیش‌فرمت‌سازی درآمد کل چون موتور قالب از .format() پشتیبانی نمی‌کند.
+    stats = dict(stats) if stats else {}
+    try:
+        stats["total_revenue_fmt"] = f"{float(stats.get('total_revenue') or 0):,.0f}"
+    except (TypeError, ValueError):
+        stats["total_revenue_fmt"] = "0"
     ctx = _base_context(user_id)
     ctx["stats"] = stats
     ctx["recent_messages"] = recent_messages or []

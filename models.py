@@ -11,12 +11,20 @@
 - استفاده از context manager برای جلوگیری از connection leak.
 - is_admin به‌صورت Boolean (در ساخت کاربر) استفاده می‌شود.
 - توابع get_user_account_type و is_host برای کنترل دسترسی میزبان/مهمان.
+- توابع مدیریت رزرو: add_to_cart با تاریخ و تعداد مهمان، محاسبه قیمت با
+  هزینه‌ی مهمان اضافی، بررسی هم‌پوشانی تاریخ رزرو، ایجاد رزرو، لغو رزرو.
+- ثابت EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT برای کنترل هزینه‌ی مهمان اضافی.
 """
 import sqlite3
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 import db_setup
+
+# هزینه‌ی هر مهمان اضافی در هر شب (تومان)
+# اگر تعداد مهمان‌ها بیشتر از max_guests اقامتگاه باشد، برای هر نفر اضافی
+# این مبلغ در هر شب به قیمت پایه اضافه می‌شود.
+EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT = 100_000
 
 # استفاده از همان نام دیتابیس که در db_setup تعریف شده
 DB_NAME = db_setup.DB_NAME
@@ -133,7 +141,8 @@ def get_all_properties():
     with get_db() as conn:
         rows = conn.execute(
             "SELECT id, host_id, title, property_type, location, price_per_night, "
-            "max_guests, bedrooms, bathrooms, description, amenities, images, created_at "
+            "max_guests, bedrooms, bathrooms, description, amenities, images, "
+            "is_reserved, created_at, updated_at "
             "FROM properties ORDER BY id DESC"
         ).fetchall()
     return [_dict(r) for r in rows]
@@ -306,22 +315,52 @@ def add_comment(user_id, property_id, comment_text, rating):
 # ===================== سبد خرید =====================
 
 def get_cart_items(user_id):
+    """گرفتن آیتم‌های سبد خرید کاربر به‌همراه اطلاعات اقامتگاه و تاریخ/مهمان.
+
+    برای هر آیتم، تعداد شب‌ها و قیمت کل محاسبه می‌شود.
+    """
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT c.id AS cart_id, p.id, p.title, p.location, p.price_per_night, p.images "
+            "SELECT c.id AS cart_id, c.property_id, c.check_in_date, c.check_out_date, "
+            "       c.guests, c.added_at, "
+            "       p.id, p.title, p.location, p.price_per_night, p.max_guests, p.images, "
+            "       p.is_reserved "
             "FROM cart c JOIN properties p ON c.property_id = p.id "
             "WHERE c.user_id = ? ORDER BY c.added_at DESC",
             (user_id,)
         ).fetchall()
-    return [_dict(r) for r in rows]
+
+    items = []
+    for r in rows:
+        d = _dict(r)
+        # محاسبه‌ی تعداد شب‌ها و قیمت کل برای این آیتم
+        nights, base_price, extra_guests, extra_charge, total = calculate_reservation_price(
+            price_per_night=d.get("price_per_night"),
+            max_guests=d.get("max_guests"),
+            check_in=d.get("check_in_date"),
+            check_out=d.get("check_out_date"),
+            guests=d.get("guests") or 1,
+        )
+        d["nights"] = nights
+        d["base_price"] = base_price
+        d["extra_guests"] = extra_guests
+        d["extra_guest_charge"] = extra_charge
+        d["total_price"] = total
+        items.append(d)
+    return items
 
 
-def add_to_cart(user_id, property_id):
-    """از INSERT OR IGNORE استفاده می‌شود تا از تکرار جلوگیری شود."""
+def add_to_cart(user_id, property_id, check_in_date=None, check_out_date=None, guests=1):
+    """افزودن اقامتگاه به سبد خرید با تاریخ ورود/خروج و تعداد مهمان.
+
+    از INSERT OR IGNORE استفاده نمی‌شود چون می‌خواهیم کاربر بتواند
+    همان اقامتگاه را در تاریخ‌های مختلف به سبد اضافه کند.
+    """
     with get_db() as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO cart (user_id, property_id) VALUES (?, ?)",
-            (user_id, property_id)
+            "INSERT INTO cart (user_id, property_id, check_in_date, check_out_date, guests) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, property_id, check_in_date, check_out_date, int(guests or 1))
         )
         conn.commit()
 
@@ -339,6 +378,271 @@ def clear_cart(user_id):
     with get_db() as conn:
         conn.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
         conn.commit()
+
+
+# ===================== رزرو (Reservations) =====================
+
+def _parse_date(s):
+    """تبدیل رشته‌ی تاریخ YYYY-MM-DD به date. در صورت خطا None برمی‌گرداند."""
+    if not s:
+        return None
+    if isinstance(s, date):
+        return s
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def calculate_reservation_price(price_per_night, max_guests, check_in, check_out, guests):
+    """محاسبه‌ی قیمت نهایی رزرو.
+
+    خروجی: tuple از (nights, base_price, extra_guests, extra_guest_charge, total_price)
+
+    - nights: تعداد شب‌ها بین check_in و check_out (حداقل ۱)
+    - base_price: price_per_night * nights
+    - extra_guests: max(0, guests - max_guests)
+    - extra_guest_charge: extra_guests * EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT * nights
+    - total_price: base_price + extra_guest_charge
+
+    اگر تاریخ‌ها نامعتبر باشند، nights=1 در نظر گرفته می‌شود.
+    """
+    try:
+        price = float(price_per_night or 0)
+    except (TypeError, ValueError):
+        price = 0.0
+
+    try:
+        mg = int(max_guests or 1)
+    except (TypeError, ValueError):
+        mg = 1
+
+    try:
+        g = int(guests or 1)
+    except (TypeError, ValueError):
+        g = 1
+    if g < 1:
+        g = 1
+
+    d_in = _parse_date(check_in)
+    d_out = _parse_date(check_out)
+    nights = 1
+    if d_in and d_out and d_out > d_in:
+        nights = (d_out - d_in).days
+
+    base_price = price * nights
+    extra_guests = max(0, g - mg)
+    extra_guest_charge = extra_guests * EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT * nights
+    total_price = base_price + extra_guest_charge
+
+    return nights, base_price, extra_guests, extra_guest_charge, total_price
+
+
+def is_property_available(property_id, check_in, check_out, exclude_reservation_id=None):
+    """بررسی اینکه آیا اقامتگاه در بازه‌ی مشخص شده قابل رزرو است یا خیر.
+
+    منطق:
+    - اگر property.is_reserved = 1 باشد، یعنی یک رزرو فعال دارد → اگر بازه‌ی رزرو
+      جدید با بازه‌ی رزرو موجود هم‌پوشانی داشته باشد، قابل رزرو نیست.
+    - در جدول reservations، رزروهایی با status='confirmed' را بررسی می‌کنیم که
+      بازه‌ی آن‌ها با بازه‌ی درخواستی هم‌پوشانی داشته باشد.
+
+    هم‌پوشانی: A.start < B.end AND B.start < A.end
+    """
+    d_in = _parse_date(check_in)
+    d_out = _parse_date(check_out)
+    if not d_in or not d_out or d_out <= d_in:
+        return False, "تاریخ ورود و خروج نامعتبر است."
+
+    with get_db() as conn:
+        # بررسی رزروهای تاییدشده‌ی هم‌پوشان
+        if exclude_reservation_id:
+            query = (
+                "SELECT id, check_in_date, check_out_date FROM reservations "
+                "WHERE property_id = ? AND status = 'confirmed' AND id != ? "
+                "AND check_in_date < ? AND check_out_date > ?"
+            )
+            rows = conn.execute(query, (property_id, exclude_reservation_id,
+                                        d_out.isoformat(), d_in.isoformat())).fetchall()
+        else:
+            query = (
+                "SELECT id, check_in_date, check_out_date FROM reservations "
+                "WHERE property_id = ? AND status = 'confirmed' "
+                "AND check_in_date < ? AND check_out_date > ?"
+            )
+            rows = conn.execute(query, (property_id,
+                                        d_out.isoformat(), d_in.isoformat())).fetchall()
+
+    if rows:
+        r = rows[0]
+        return False, (
+            f"این اقامتگاه از {r['check_in_date']} تا {r['check_out_date']} "
+            f"توسط کاربر دیگری رزرو شده است."
+        )
+    return True, None
+
+
+def create_reservation(user_id, property_id, check_in_date, check_out_date, guests):
+    """ایجاد رزرو نهایی برای یک اقامتگاه.
+
+    مراحل:
+    1. بررسی در دسترس بودن اقامتگاه در بازه‌ی مشخص شده.
+    2. گرفتن اطلاعات اقامتگاه از DB.
+    3. محاسبه‌ی قیمت نهایی (با هزینه‌ی مهمان اضافی).
+    4. درج در جدول reservations.
+    5. تنظیم is_reserved=1 برای اقامتگاه.
+
+    خروجی: (reservation_id, error_message)
+    اگر خطا باشد، reservation_id=None و error_message تنظیم می‌شود.
+    """
+    # اعتبارسنجی ورودی
+    try:
+        guests_int = int(guests)
+        if guests_int < 1:
+            return None, "تعداد مهمان باید حداقل ۱ باشد."
+    except (TypeError, ValueError):
+        return None, "تعداد مهمان نامعتبر است."
+
+    # بررسی در دسترس بودن
+    available, err = is_property_available(property_id, check_in_date, check_out_date)
+    if not available:
+        return None, err
+
+    # گرفتن اطلاعات اقامتگاه
+    prop = get_property(property_id)
+    if not prop:
+        return None, "اقامتگاه یافت نشد."
+
+    if guests_int > int(prop.get("max_guests") or 1) * 3:
+        # محدودیت امنیتی: حداکثر ۳ برابر ظرفیت مجاز است
+        return None, (
+            f"تعداد مهمان‌ها بیش از حد مجاز است. حداکثر ظرفیت: "
+            f"{prop.get('max_guests')} نفر (با هزینه‌ی اضافی تا ۳ برابر)."
+        )
+
+    # محاسبه‌ی قیمت
+    nights, base_price, extra_guests, extra_charge, total = calculate_reservation_price(
+        price_per_night=prop.get("price_per_night"),
+        max_guests=prop.get("max_guests"),
+        check_in=check_in_date,
+        check_out=check_out_date,
+        guests=guests_int,
+    )
+
+    # درج در جدول reservations
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO reservations "
+            "(user_id, property_id, check_in_date, check_out_date, guests, "
+            " extra_guests, extra_guest_charge, nights, base_price, total_price, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')",
+            (user_id, property_id, check_in_date, check_out_date, guests_int,
+             extra_guests, extra_charge, nights, base_price, total)
+        )
+        reservation_id = cur.lastrowid
+        # علامت‌گذاری اقامتگاه به‌عنوان رزروشده
+        conn.execute(
+            "UPDATE properties SET is_reserved = 1, updated_at = CURRENT_TIMESTAMP "
+            "WHERE id = ?",
+            (property_id,)
+        )
+        conn.commit()
+
+    return reservation_id, None
+
+
+def get_reservation(reservation_id):
+    """گرفتن یک رزرو با id — به‌همراه عنوان و موقعیت اقامتگاه."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT r.*, p.title AS property_title, p.location AS property_location, "
+            "       p.price_per_night AS property_price, p.max_guests AS property_max_guests "
+            "FROM reservations r "
+            "JOIN properties p ON r.property_id = p.id "
+            "WHERE r.id = ?",
+            (reservation_id,)
+        ).fetchone()
+    return _dict(row)
+
+
+def get_user_reservations(user_id):
+    """گرفتن همه‌ی رزروهای کاربر — به‌همراه اطلاعات اقامتگاه."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT r.*, p.title AS property_title, p.location AS property_location, "
+            "       p.images AS property_images "
+            "FROM reservations r "
+            "JOIN properties p ON r.property_id = p.id "
+            "WHERE r.user_id = ? "
+            "ORDER BY r.created_at DESC",
+            (user_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
+
+def get_reservations_for_property(property_id):
+    """گرفتن رزروهای تاییدشده‌ی یک اقامتگاه (برای نمایش در صفحه‌ی جزئیات)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, check_in_date, check_out_date, status "
+            "FROM reservations "
+            "WHERE property_id = ? AND status = 'confirmed' "
+            "ORDER BY check_in_date ASC",
+            (property_id,)
+        ).fetchall()
+    return [_dict(r) for r in rows]
+
+
+def cancel_reservation(reservation_id, user_id=None):
+    """لغو یک رزرو.
+
+    - اگر user_id داده شود، فقط رزروی که متعلق به همان کاربر است لغو می‌شود.
+    - status به 'cancelled' تغییر می‌کند.
+    - اگر هیچ رزروی تاییدشده‌ی دیگری برای آن اقامتگاه نباشد، is_reserved به 0 برمی‌گردد.
+    """
+    with get_db() as conn:
+        # بررسی مالکیت رزرو
+        if user_id is not None:
+            row = conn.execute(
+                "SELECT user_id, property_id FROM reservations WHERE id = ?",
+                (reservation_id,)
+            ).fetchone()
+            if not row:
+                return False, "رزرو یافت نشد."
+            if row["user_id"] != user_id:
+                return False, "شما مجوز لغو این رزرو را ندارید."
+            property_id = row["property_id"]
+        else:
+            row = conn.execute(
+                "SELECT property_id FROM reservations WHERE id = ?",
+                (reservation_id,)
+            ).fetchone()
+            if not row:
+                return False, "رزرو یافت نشد."
+            property_id = row["property_id"]
+
+        # لغو رزرو
+        conn.execute(
+            "UPDATE reservations SET status = 'cancelled' WHERE id = ?",
+            (reservation_id,)
+        )
+
+        # بررسی آیا رزروی تاییدشده‌ی دیگری برای این اقامتگاه وجود دارد
+        remaining = conn.execute(
+            "SELECT COUNT(*) AS c FROM reservations "
+            "WHERE property_id = ? AND status = 'confirmed'",
+            (property_id,)
+        ).fetchone()["c"]
+
+        if remaining == 0:
+            conn.execute(
+                "UPDATE properties SET is_reserved = 0, updated_at = CURRENT_TIMESTAMP "
+                "WHERE id = ?",
+                (property_id,)
+            )
+
+        conn.commit()
+    return True, None
 
 
 # ===================== علاقه‌مندی =====================
@@ -441,6 +745,17 @@ def get_admin_stats():
         hosts_count = conn.execute(
             "SELECT COUNT(*) AS c FROM users WHERE account_type = 'host'"
         ).fetchone()["c"]
+        reservations_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM reservations WHERE status = 'confirmed'"
+        ).fetchone()["c"]
+        reserved_properties_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM properties WHERE is_reserved = 1"
+        ).fetchone()["c"]
+        revenue_row = conn.execute(
+            "SELECT COALESCE(SUM(total_price), 0) AS s FROM reservations "
+            "WHERE status = 'confirmed'"
+        ).fetchone()
+        total_revenue = float(revenue_row["s"] or 0)
     return {
         "users": users_count,
         "properties": properties_count,
@@ -448,4 +763,7 @@ def get_admin_stats():
         "unread_messages": unread_count,
         "comments": comments_count,
         "hosts": hosts_count,
+        "reservations": reservations_count,
+        "reserved_properties": reserved_properties_count,
+        "total_revenue": total_revenue,
     }

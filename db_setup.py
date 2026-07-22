@@ -8,6 +8,10 @@
 - `is_admin` به‌صورت BOOLEAN تعریف می‌شود (در SQLite هم‌معنی INTEGER 0/1 است،
   اما از نظر خوانایی کد و قصد برنامه‌نویس، Boolean است).
 - PRAGMA foreign_keys = ON فعال شده تا ON DELETE CASCADE واقعاً کار کند.
+- جدول `properties` فیلد `is_reserved` گرفته تا وضعیت رزرو سریع نشان داده شود.
+- جدول `cart` فیلدهای `check_in_date`, `check_out_date`, `guests` گرفت تا کاربر
+  هنگام افزودن به سبد، تاریخ ورود/خروج و تعداد مهمان را وارد کند.
+- جدول جدید `reservations` برای ثبت نهایی رزروها ساخته شد.
 """
 import sqlite3
 import os
@@ -41,6 +45,7 @@ EXPECTED_SCHEMA = {
         "bathrooms": "INTEGER DEFAULT 0",
         "amenities": "TEXT",
         "images": "TEXT",
+        "is_reserved": "BOOLEAN DEFAULT 0",
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "FOREIGN KEY (host_id)": "REFERENCES users(id) ON DELETE CASCADE"
@@ -59,6 +64,9 @@ EXPECTED_SCHEMA = {
         "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
         "user_id": "INTEGER NOT NULL",
         "property_id": "INTEGER NOT NULL",
+        "check_in_date": "TEXT",
+        "check_out_date": "TEXT",
+        "guests": "INTEGER DEFAULT 1",
         "added_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE",
         "FOREIGN KEY (property_id)": "REFERENCES properties(id) ON DELETE CASCADE"
@@ -87,6 +95,23 @@ EXPECTED_SCHEMA = {
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "expires_at": "TIMESTAMP",
         "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE"
+    },
+    "reservations": {
+        "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "user_id": "INTEGER NOT NULL",
+        "property_id": "INTEGER NOT NULL",
+        "check_in_date": "TEXT NOT NULL",
+        "check_out_date": "TEXT NOT NULL",
+        "guests": "INTEGER NOT NULL",
+        "extra_guests": "INTEGER DEFAULT 0",
+        "extra_guest_charge": "REAL DEFAULT 0",
+        "nights": "INTEGER NOT NULL",
+        "base_price": "REAL NOT NULL",
+        "total_price": "REAL NOT NULL",
+        "status": "TEXT DEFAULT 'confirmed' CHECK(status IN ('confirmed', 'cancelled', 'completed'))",
+        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE",
+        "FOREIGN KEY (property_id)": "REFERENCES properties(id) ON DELETE CASCADE"
     }
 }
 
@@ -135,6 +160,7 @@ def create_tables(conn):
             bathrooms INTEGER DEFAULT 0,
             amenities TEXT,
             images TEXT,
+            is_reserved BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE
@@ -153,6 +179,9 @@ def create_tables(conn):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             property_id INTEGER NOT NULL,
+            check_in_date TEXT,
+            check_out_date TEXT,
+            guests INTEGER DEFAULT 1,
             added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
@@ -181,6 +210,23 @@ def create_tables(conn):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""",
+        """CREATE TABLE IF NOT EXISTS reservations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            property_id INTEGER NOT NULL,
+            check_in_date TEXT NOT NULL,
+            check_out_date TEXT NOT NULL,
+            guests INTEGER NOT NULL,
+            extra_guests INTEGER DEFAULT 0,
+            extra_guest_charge REAL DEFAULT 0,
+            nights INTEGER NOT NULL,
+            base_price REAL NOT NULL,
+            total_price REAL NOT NULL,
+            status TEXT DEFAULT 'confirmed' CHECK(status IN ('confirmed', 'cancelled', 'completed')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
         )"""
     ]
     try:

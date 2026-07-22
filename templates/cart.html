@@ -20,6 +20,7 @@
             <a href="/contact">تماس با ما</a>
             {% if user_id %}
             <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/reservations"><i class="fas fa-calendar-check"></i> رزروهای من</a>
             <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
             {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
             {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
@@ -33,36 +34,85 @@
 </header>
 
 <main>
-<div class="container" style="max-width:900px;margin:2.5rem auto;">
+<div class="container" style="max-width:1000px;margin:2.5rem auto;">
     <div class="page-header">
         <h1><i class="fas fa-shopping-cart" style="color:var(--primary);"></i> سبد خرید شما</h1>
-        <p>اقامتگاه‌هایی که برای رزرو انتخاب کرده‌اید</p>
+        <p>اقامتگاه‌هایی که برای رزرو انتخاب کرده‌اید — لطفاً پیش از پرداخت، تاریخ‌ها و تعداد مهمان را بررسی کنید</p>
     </div>
+
     {% if items %}
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>اقامتگاه</th>
-                <th>موقعیت</th>
-                <th>قیمت (هر شب)</th>
-                <th>عملیات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td><strong>{{ item.title }}</strong></td>
-                <td><i class="fas fa-map-marker-alt" style="color:var(--accent);"></i> {{ item.location }}</td>
-                <td style="color:var(--accent);font-weight:600;">{{ item.price_per_night }} تومان</td>
-                <td><a href="/cart/{{ item.cart_id }}/remove" style="color:var(--danger);"><i class="fas fa-trash"></i> حذف</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;flex-wrap:wrap;gap:1rem;">
-        <a href="/catalog" class="btn-ghost"><i class="fas fa-arrow-right"></i> ادامه خرید</a>
-        <div style="font-size:1.25rem;font-weight:700;color:var(--text);">
-            جمع کل: <span style="color:var(--accent);">{{ total }}</span> تومان
+    <div class="cart-items-list">
+        {% for item in items %}
+        <div class="cart-item-card{% if item.is_reserved %} cart-item-reserved{% endif %}">
+            <div class="cart-item-header">
+                <div>
+                    <h3 class="cart-item-title">
+                        <a href="/property/{{ item.property_id }}">{{ item.title }}</a>
+                        {% if item.is_reserved %}
+                        <span class="badge badge-reserved"><i class="fas fa-lock"></i> رزرو شده</span>
+                        {% endif %}
+                    </h3>
+                    <p class="cart-item-location">
+                        <i class="fas fa-map-marker-alt" style="color:var(--accent);"></i> {{ item.location }}
+                    </p>
+                </div>
+                <a href="/cart/{{ item.cart_id }}/remove" class="btn-remove-item" onclick="return confirm('این آیتم از سبد حذف شود؟')">
+                    <i class="fas fa-trash"></i> حذف
+                </a>
+            </div>
+
+            <div class="cart-item-dates">
+                <div class="cart-date-box">
+                    <span class="cart-date-label"><i class="fas fa-sign-in-alt"></i> ورود</span>
+                    <strong>{{ item.check_in_date }}</strong>
+                </div>
+                <div class="cart-date-arrow">
+                    <i class="fas fa-arrow-left"></i>
+                    <small>{{ item.nights }} شب</small>
+                </div>
+                <div class="cart-date-box">
+                    <span class="cart-date-label"><i class="fas fa-sign-out-alt"></i> خروج</span>
+                    <strong>{{ item.check_out_date }}</strong>
+                </div>
+                <div class="cart-date-box">
+                    <span class="cart-date-label"><i class="fas fa-users"></i> مهمان</span>
+                    <strong>{{ item.guests }} نفر</strong>
+                    {% if item.has_extra_guests %}
+                    <small style="color:var(--accent);">({{ item.extra_guests }} نفر اضافی)</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="cart-item-pricing">
+                <div class="cart-price-row">
+                    <span>قیمت پایه ({{ item.nights }} شب × {{ item.price_per_night }} تومان)</span>
+                    <strong>{{ item.base_price }} تومان</strong>
+                </div>
+                {% if item.has_extra_guests %}
+                <div class="cart-price-row cart-price-extra">
+                    <span>هزینه‌ی مهمان اضافی ({{ item.extra_guests }} نفر × {{ item.nights }} شب)</span>
+                    <strong>+{{ item.extra_guest_charge }} تومان</strong>
+                </div>
+                {% endif %}
+                <div class="cart-price-row cart-price-total">
+                    <span>مجموع</span>
+                    <strong>{{ item.total_price }} تومان</strong>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="cart-summary">
+        <div class="cart-summary-total">
+            <span>جمع کل سبد:</span>
+            <strong>{{ total }} <small>تومان</small></strong>
+        </div>
+        <div class="cart-summary-actions">
+            <a href="/catalog" class="btn-ghost"><i class="fas fa-arrow-right"></i> ادامه خرید</a>
+            <a href="/checkout" class="btn-primary">
+                <i class="fas fa-check-circle"></i> ادامه و پرداخت
+            </a>
         </div>
     </div>
     {% else %}

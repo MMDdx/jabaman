@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رزروهای من | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/reservations"><i class="fas fa-calendar-check"></i> رزروهای من</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
+            {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
+<div class="container" style="max-width:1000px;margin:2.5rem auto;">
+    <div class="page-header">
+        <h1><i class="fas fa-calendar-check" style="color:var(--primary);"></i> رزروهای من</h1>
+        <p>لیست رزروهای شما — می‌توانید رزروهای تاییدشده را لغو کنید</p>
+    </div>
+
+    {% if reservations %}
+    <div class="reservations-list">
+        {% for r in reservations %}
+        <div class="reservation-card reservation-status-{{ r.status }}">
+            <div class="reservation-card-header">
+                <div>
+                    <h3 class="reservation-title">
+                        <a href="/property/{{ r.property_id }}">{{ r.property_title }}</a>
+                    </h3>
+                    <p class="reservation-location">
+                        <i class="fas fa-map-marker-alt" style="color:var(--accent);"></i> {{ r.property_location }}
+                    </p>
+                </div>
+                <div class="reservation-status-badge reservation-status-badge-{{ r.status }}">
+                    {% if r.is_confirmed %}
+                    <i class="fas fa-check-circle"></i>
+                    {% elif r.is_cancelled %}
+                    <i class="fas fa-times-circle"></i>
+                    {% else %}
+                    <i class="fas fa-flag-checkered"></i>
+                    {% endif %}
+                    {{ r.status_fa }}
+                </div>
+            </div>
+
+            <div class="reservation-meta">
+                <div class="meta-pill">
+                    <i class="fas fa-hashtag"></i>
+                    <span>کد رزرو: <strong>#{{ r.id }}</strong></span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>ورود: <strong>{{ r.check_in_date }}</strong></span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>خروج: <strong>{{ r.check_out_date }}</strong></span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-moon"></i>
+                    <span><strong>{{ r.nights }}</strong> شب</span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-users"></i>
+                    <span><strong>{{ r.guests }}</strong> مهمان
+                        {% if r.has_extra_guests %}
+                        <small style="color:var(--accent);">({{ r.extra_guests }} اضافی)</small>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="reservation-pricing">
+                <div class="cart-price-row">
+                    <span>قیمت پایه ({{ r.nights }} شب)</span>
+                    <strong>{{ r.base_price }} تومان</strong>
+                </div>
+                {% if r.has_extra_guests %}
+                <div class="cart-price-row cart-price-extra">
+                    <span>هزینه‌ی مهمان اضافی</span>
+                    <strong>+{{ r.extra_guest_charge }} تومان</strong>
+                </div>
+                {% endif %}
+                <div class="cart-price-row cart-price-total">
+                    <span>مجموع</span>
+                    <strong>{{ r.total_price }} تومان</strong>
+                </div>
+            </div>
+
+            <div class="reservation-footer">
+                <small class="reservation-date">
+                    <i class="fas fa-clock"></i> ثبت شده در: {{ r.created_at }}
+                </small>
+                {% if r.is_confirmed %}
+                <a href="/reservation/{{ r.id }}/cancel"
+                   class="btn-cancel-reservation"
+                   onclick="return confirm('آیا از لغو این رزرو مطمئن هستید؟ با لغو رزرو، اقامتگاه برای دیگران آزاد می‌شود.')">
+                    <i class="fas fa-times"></i> لغو رزرو
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:4rem 1rem;color:var(--text-muted);">
+        <i class="fas fa-calendar-times" style="font-size:4rem;opacity:0.2;display:block;margin-bottom:1rem;"></i>
+        <h2 style="color:var(--text);margin-bottom:0.5rem;">هنوز رزروی ندارید</h2>
+        <p style="margin-bottom:1.5rem;">اقامتگاه‌های مورد نظر را انتخاب و رزرو کنید</p>
+        <a href="/catalog" class="btn-primary">مشاهده اقامتگاه‌ها</a>
+    </div>
+    {% endif %}
+
+    <p class="text-center" style="margin-top:2.5rem;">
+        <a href="/" class="btn-ghost"><i class="fas fa-arrow-right"></i> بازگشت به خانه</a>
+    </p>
+</div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

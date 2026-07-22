@@ -20,6 +20,7 @@
             <a href="/contact">تماس با ما</a>
             {% if user_id %}
             <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/reservations"><i class="fas fa-calendar-check"></i> رزروهای من</a>
             <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
             {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
             {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
@@ -35,9 +36,16 @@
 <main>
 <div class="detail-container">
     <div class="detail-header">
-        <span class="detail-icon">{{ type_icon|default('🏠') }}</span>
+        <span class="detail-icon">🏠</span>
         <div>
-            <h1>{{ property.title }}</h1>
+            <h1>
+                {{ property.title }}
+                {% if property.is_reserved %}
+                <span class="badge badge-reserved"><i class="fas fa-lock"></i> رزرو شده</span>
+                {% else %}
+                <span class="badge badge-available"><i class="fas fa-check-circle"></i> قابل رزرو</span>
+                {% endif %}
+            </h1>
             <p class="detail-location"><i class="fas fa-map-marker-alt"></i> {{ property.location }}</p>
         </div>
     </div>
@@ -52,19 +60,76 @@
     </div>
     <div class="detail-description">{{ property.description }}</div>
 
+    {% if upcoming_reservations %}
+    <div class="reserved-dates-box">
+        <h3><i class="fas fa-calendar-times" style="color:var(--danger);"></i> تاریخ‌های رزروشده</h3>
+        <p class="reserved-dates-hint">این اقامتگاه در تاریخ‌های زیر توسط کاربران دیگر رزرو شده است. لطفاً بازه‌ی دیگری انتخاب کنید.</p>
+        <ul class="reserved-dates-list">
+            {% for r in upcoming_reservations %}
+            <li>
+                <i class="fas fa-calendar-day"></i>
+                از <strong>{{ r.check_in_date }}</strong> تا <strong>{{ r.check_out_date }}</strong>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     {% if user_id %}
-    <div style="display:flex;gap:1rem;margin:1.5rem 0;flex-wrap:wrap;">
-        <form method="POST" action="/cart/add" style="display:inline;">
+    <div class="reservation-form-card">
+        <h3 style="margin-bottom:1rem;color:var(--text);font-size:1.15rem;display:flex;align-items:center;gap:0.5rem;">
+            <i class="fas fa-calendar-plus" style="color:var(--primary);"></i>
+            افزودن به سبد خرید
+        </h3>
+        <form method="POST" action="/cart/add" id="add-to-cart-form">
             <input type="hidden" name="property_id" value="{{ property.id }}">
-            <button type="submit" class="btn-primary">
-                <i class="fas fa-shopping-cart"></i> افزودن به سبد خرید
-            </button>
-        </form>
-        <form method="POST" action="/wishlist/add" style="display:inline;">
-            <input type="hidden" name="property_id" value="{{ property.id }}">
-            <button type="submit" class="btn-outline">
-                <i class="fas fa-heart"></i> افزودن به علاقه‌مندی
-            </button>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="check_in_date"><i class="fas fa-sign-in-alt"></i> تاریخ ورود <span class="required-star">*</span></label>
+                    <input type="date" id="check_in_date" name="check_in_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="check_out_date"><i class="fas fa-sign-out-alt"></i> تاریخ خروج <span class="required-star">*</span></label>
+                    <input type="date" id="check_out_date" name="check_out_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="guests"><i class="fas fa-users"></i> تعداد مهمان <span class="required-star">*</span></label>
+                    <input type="number" id="guests" name="guests" class="form-control" min="1" max="{{ property.max_guests_x3 }}" value="1" required>
+                    <small style="color:var(--text-muted);font-size:0.85rem;display:block;margin-top:0.25rem;">
+                        ظرفیت استاندارد: {{ property.max_guests }} نفر.
+                        برای هر مهمان اضافی، {{ extra_guest_charge_fmt }} تومان در هر شب اضافه می‌شود.
+                    </small>
+                </div>
+            </div>
+            <div id="price-preview" class="price-preview" style="display:none;">
+                <div class="price-preview-row">
+                    <span>تعداد شب:</span>
+                    <strong id="preview-nights">—</strong>
+                </div>
+                <div class="price-preview-row">
+                    <span>قیمت پایه:</span>
+                    <strong id="preview-base">—</strong>
+                </div>
+                <div class="price-preview-row" id="preview-extra-row" style="display:none;">
+                    <span>هزینه‌ی مهمان اضافی:</span>
+                    <strong id="preview-extra">—</strong>
+                </div>
+                <div class="price-preview-row price-preview-total">
+                    <span>مجموع:</span>
+                    <strong id="preview-total">—</strong> تومان
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap;">
+                <button type="submit" class="btn-primary" id="add-to-cart-btn">
+                    <i class="fas fa-shopping-cart"></i> افزودن به سبد
+                </button>
+                <form method="POST" action="/wishlist/add" style="display:inline;">
+                    <input type="hidden" name="property_id" value="{{ property.id }}">
+                    <button type="submit" class="btn-outline">
+                        <i class="fas fa-heart"></i> افزودن به علاقه‌مندی
+                    </button>
+                </form>
+            </div>
         </form>
     </div>
     {% else %}
@@ -135,5 +200,86 @@
 </footer>
 
 <script src="/static/js/main.js"></script>
+<script>
+(function() {
+    var checkIn = document.getElementById('check_in_date');
+    var checkOut = document.getElementById('check_out_date');
+    var guests = document.getElementById('guests');
+    var preview = document.getElementById('price-preview');
+    var pricePerNight = parseFloat("{{ property.price_per_night }}") || 0;
+    var maxGuests = parseInt("{{ property.max_guests }}") || 1;
+    var extraChargePerGuest = parseInt("{{ extra_guest_charge }}") || 100000;
+
+    function fmt(num) {
+        return num.toLocaleString('fa-IR');
+    }
+
+    function updatePreview() {
+        if (!checkIn.value || !checkOut.value) {
+            preview.style.display = 'none';
+            return;
+        }
+        var d1 = new Date(checkIn.value);
+        var d2 = new Date(checkOut.value);
+        if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 <= d1) {
+            preview.style.display = 'none';
+            return;
+        }
+        var nights = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        if (nights < 1) nights = 1;
+        var g = parseInt(guests.value) || 1;
+        var base = pricePerNight * nights;
+        var extraGuests = Math.max(0, g - maxGuests);
+        var extraCharge = extraGuests * extraChargePerGuest * nights;
+        var total = base + extraCharge;
+
+        document.getElementById('preview-nights').textContent = fmt(nights) + ' شب';
+        document.getElementById('preview-base').textContent = fmt(base);
+        if (extraGuests > 0) {
+            document.getElementById('preview-extra-row').style.display = 'flex';
+            document.getElementById('preview-extra').textContent = fmt(extraCharge) + ' (' + fmt(extraGuests) + ' نفر اضافی × ' + fmt(nights) + ' شب)';
+        } else {
+            document.getElementById('preview-extra-row').style.display = 'none';
+        }
+        document.getElementById('preview-total').textContent = fmt(total);
+        preview.style.display = 'block';
+    }
+
+    if (checkIn && checkOut && guests) {
+        checkIn.addEventListener('change', updatePreview);
+        checkOut.addEventListener('change', updatePreview);
+        guests.addEventListener('input', updatePreview);
+        // تنظیم حداقل تاریخ ورود به امروز
+        var today = new Date().toISOString().split('T')[0];
+        checkIn.setAttribute('min', today);
+        checkOut.setAttribute('min', today);
+    }
+
+    // اعتبارسنجی قبل از ارسال
+    var form = document.getElementById('add-to-cart-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!checkIn.value || !checkOut.value) {
+                e.preventDefault();
+                alert('لطفاً تاریخ ورود و خروج را انتخاب کنید.');
+                return;
+            }
+            var d1 = new Date(checkIn.value);
+            var d2 = new Date(checkOut.value);
+            if (d2 <= d1) {
+                e.preventDefault();
+                alert('تاریخ خروج باید بعد از تاریخ ورود باشد.');
+                return;
+            }
+            var g = parseInt(guests.value) || 0;
+            if (g < 1) {
+                e.preventDefault();
+                alert('تعداد مهمان باید حداقل ۱ باشد.');
+                return;
+            }
+        });
+    }
+})();
+</script>
 </body>
 </html>

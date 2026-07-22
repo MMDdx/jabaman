@@ -1756,3 +1756,611 @@ input[type="file"] {
         gap: 2rem;
     }
 }
+
+/* ============================================================
+   ۱۵) استایل‌های رزرو، سبد خرید و پرداخت
+   ============================================================ */
+
+/* ---------- بج‌های وضعیت رزرو ---------- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+.badge-reserved {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger, #DC2626);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.badge-available {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ---------- جعبه‌ی تاریخ‌های رزروشده ---------- */
+.reserved-dates-box {
+    margin: 1.5rem 0;
+    padding: 1.25rem 1.5rem;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 14px;
+}
+.reserved-dates-box h3 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem;
+    color: var(--text);
+}
+.reserved-dates-hint {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+}
+.reserved-dates-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.reserved-dates-list li {
+    background: white;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--text);
+    border: 1px solid var(--border-soft, #E5E7EB);
+}
+.reserved-dates-list i {
+    color: var(--danger, #DC2626);
+    margin-left: 0.25rem;
+}
+
+/* ---------- فرم رزرو در صفحه‌ی جزئیات اقامتگاه ---------- */
+.reservation-form-card {
+    margin: 1.75rem 0;
+    padding: 1.5rem;
+    background: var(--bg-soft, #FAF8F4);
+    border-radius: 14px;
+    border: 1px solid var(--border-soft, #E5E7EB);
+}
+.reservation-form-card .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.reservation-form-card input[type="date"] {
+    font-family: inherit;
+}
+
+/* ---------- پیش‌نمایش قیمت زنده ---------- */
+.price-preview {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 0.5rem;
+}
+.price-preview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    font-size: 0.95rem;
+    color: var(--text);
+    border-bottom: 1px dashed var(--border-soft, #E5E7EB);
+}
+.price-preview-row:last-child {
+    border-bottom: none;
+}
+.price-preview-total {
+    font-size: 1.15rem;
+    color: var(--accent, #F97316);
+    font-weight: 700;
+    margin-top: 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 2px solid var(--border, #E5E7EB);
+}
+
+/* ---------- کارت‌های سبد خرید ---------- */
+.cart-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.cart-item-card {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s;
+}
+.cart-item-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.cart-item-reserved {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.02);
+}
+.cart-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+.cart-item-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+.cart-item-title a {
+    color: inherit;
+    text-decoration: none;
+}
+.cart-item-title a:hover {
+    color: var(--primary, #0F766E);
+}
+.cart-item-location {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.btn-remove-item {
+    color: var(--danger, #DC2626);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+.btn-remove-item:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* ---------- بخش تاریخ‌ها و مهمان ---------- */
+.cart-item-dates {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    background: var(--bg-soft, #FAF8F4);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+.cart-date-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 110px;
+}
+.cart-date-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.cart-date-box strong {
+    font-size: 1rem;
+    color: var(--text);
+}
+.cart-date-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--primary, #0F766E);
+}
+.cart-date-arrow i {
+    font-size: 1rem;
+}
+.cart-date-arrow small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* ---------- ردیف‌های قیمت ---------- */
+.cart-item-pricing,
+.checkout-item-pricing,
+.reservation-pricing {
+    border-top: 1px dashed var(--border-soft, #E5E7EB);
+    padding-top: 0.75rem;
+}
+.cart-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.92rem;
+    color: var(--text);
+}
+.cart-price-extra {
+    color: var(--accent, #F97316);
+}
+.cart-price-total {
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-top: 2px solid var(--border, #E5E7EB);
+    margin-top: 0.4rem;
+    padding-top: 0.6rem;
+    color: var(--text);
+}
+.cart-price-total strong {
+    color: var(--accent, #F97316);
+}
+
+/* ---------- جمع‌کل سبد و دکمه‌ی ادامه ---------- */
+.cart-summary {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.cart-summary-total {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.cart-summary-total span {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+.cart-summary-total strong {
+    font-size: 1.5rem;
+    color: var(--accent, #F97316);
+}
+.cart-summary-total small {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+.cart-summary-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ============================================================
+   ۱۶) استایل‌های صفحه‌ی پرداخت (Checkout)
+   ============================================================ */
+.checkout-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.checkout-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    background: var(--bg-soft, #FAF8F4);
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+.checkout-step-done {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+.checkout-step-active {
+    background: var(--primary, #0F766E);
+    color: white;
+    font-weight: 600;
+}
+.checkout-step-arrow {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.checkout-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.checkout-item-card {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+}
+.checkout-item-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.15rem;
+    color: var(--text);
+}
+.checkout-item-location {
+    margin: 0 0 0.85rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.checkout-item-meta,
+.reservation-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+}
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-soft, #FAF8F4);
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+.meta-pill i {
+    color: var(--primary, #0F766E);
+}
+.meta-pill small {
+    color: var(--accent, #F97316);
+}
+
+/* ---------- کارت خلاصه‌ی پرداخت ---------- */
+.checkout-summary-card {
+    background: white;
+    border: 2px solid var(--primary, #0F766E);
+    border-radius: 14px;
+    padding: 1.5rem;
+}
+.checkout-summary-card h3 {
+    margin: 0 0 1rem;
+    color: var(--text);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.checkout-payment-info {
+    display: flex;
+    gap: 0.75rem;
+    background: rgba(15, 118, 110, 0.06);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+}
+.checkout-payment-info i {
+    color: var(--primary, #0F766E);
+    font-size: 1.1rem;
+    margin-top: 0.15rem;
+}
+.checkout-payment-info p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* ============================================================
+   ۱۷) صفحه‌ی موفقیت رزرو
+   ============================================================ */
+.success-card {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 18px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+.success-icon {
+    width: 90px;
+    height: 90px;
+    background: rgba(16, 185, 129, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    color: #059669;
+    font-size: 2.75rem;
+}
+.success-card h1 {
+    margin: 0 0 0.5rem;
+    color: var(--text);
+    font-size: 1.6rem;
+}
+.success-message {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 0 0 1rem;
+    line-height: 1.6;
+}
+.reservation-ids-box {
+    background: var(--bg-soft, #FAF8F4);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+}
+.reservation-ids-box h4 {
+    margin: 0 0 0.5rem;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+.reservation-ids-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+.reservation-id-pill {
+    background: var(--primary, #0F766E);
+    color: white;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.success-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+/* ---------- هشدار اخطار ---------- */
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    color: #92400E;
+}
+
+/* ============================================================
+   ۱۸) صفحه‌ی رزروهای من
+   ============================================================ */
+.reservations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.reservation-card {
+    background: white;
+    border: 1px solid var(--border-soft, #E5E7EB);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s;
+}
+.reservation-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.reservation-status-cancelled {
+    opacity: 0.65;
+    background: var(--bg-soft, #FAF8F4);
+}
+.reservation-status-cancelled .reservation-title a {
+    text-decoration: line-through;
+}
+.reservation-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.reservation-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.15rem;
+}
+.reservation-title a {
+    color: var(--text);
+    text-decoration: none;
+}
+.reservation-title a:hover {
+    color: var(--primary, #0F766E);
+}
+.reservation-location {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.reservation-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.reservation-status-badge-confirmed {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+.reservation-status-badge-cancelled {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger, #DC2626);
+}
+.reservation-status-badge-completed {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563EB;
+}
+.reservation-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed var(--border-soft, #E5E7EB);
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.reservation-date {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+.btn-cancel-reservation {
+    color: var(--danger, #DC2626);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    transition: background 0.2s;
+}
+.btn-cancel-reservation:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* ---------- استایل کارت آماری اضافی (info) ---------- */
+.stat-card-info {
+    border-right: 4px solid #3B82F6;
+}
+.stat-card-info .stat-icon {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563EB;
+}
+
+/* ---------- واکنش‌گرایی ---------- */
+@media (max-width: 640px) {
+    .cart-item-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .cart-summary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .cart-summary-actions {
+        flex-direction: column;
+    }
+    .cart-summary-actions .btn-ghost,
+    .cart-summary-actions .btn-primary {
+        text-align: center;
+    }
+    .checkout-steps {
+        font-size: 0.85rem;
+    }
+    .checkout-step {
+        padding: 0.5rem 0.75rem;
+    }
+    .reservation-card-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

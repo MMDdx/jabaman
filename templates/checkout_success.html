@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رزرو با موفقیت ثبت شد | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/reservations"><i class="fas fa-calendar-check"></i> رزروهای من</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
+            {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
+<div class="container" style="max-width:700px;margin:3rem auto;">
+    <div class="success-card">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h1>رزرو شما با موفقیت ثبت شد!</h1>
+        <p class="success-message">
+            {% if success_count == 1 %}
+            ۱ رزرو با موفقیت ایجاد شد.
+            {% else %}
+            {{ success_count }} رزرو با موفقیت ایجاد شد.
+            {% endif %}
+            جزئیات رزروها را می‌توانید در صفحه‌ی «رزروهای من» مشاهده کنید.
+        </p>
+
+        {% if has_errors %}
+        <div class="alert alert-warning" style="margin:1.5rem 0;text-align:right;">
+            <strong><i class="fas fa-exclamation-triangle"></i> برخی آیتم‌ها رزرو نشدند:</strong>
+            <ul style="margin-top:0.5rem;padding-right:1.5rem;">
+                {% for err in errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+            <p style="margin-top:0.5rem;font-size:0.9rem;">سایر رزروها با موفقیت انجام شد.</p>
+        </div>
+        {% endif %}
+
+        {% if reservation_ids %}
+        <div class="reservation-ids-box">
+            <h4><i class="fas fa-hashtag"></i> کدهای رزرو:</h4>
+            <div class="reservation-ids-list">
+                {% for rid in reservation_ids %}
+                <span class="reservation-id-pill">#{{ rid }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="success-actions">
+            <a href="/reservations" class="btn-primary">
+                <i class="fas fa-calendar-check"></i> مشاهده رزروهای من
+            </a>
+            <a href="/catalog" class="btn-ghost">
+                <i class="fas fa-home"></i> بازگشت به کاتالوگ
+            </a>
+        </div>
+    </div>
+</div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأیید و پرداخت | جابامن</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="main-header">
+    <div class="header-container">
+        <a href="/" class="logo">
+            <img src="/static/images/logo.svg" class="logo-img" alt="جابامن">
+        </a>
+        <nav class="main-nav">
+            <a href="/">خانه</a>
+            <a href="/catalog">اقامتگاه‌ها</a>
+            <a href="/contact">تماس با ما</a>
+            {% if user_id %}
+            <a href="/cart"><i class="fas fa-shopping-cart"></i> سبد</a>
+            <a href="/reservations"><i class="fas fa-calendar-check"></i> رزروهای من</a>
+            <a href="/wishlist"><i class="fas fa-heart"></i> علاقه‌مندی</a>
+            {% if is_host %}<a href="/add-property" class="btn-outline btn-sm">افزودن اقامتگاه</a>{% endif %}
+            {% if is_admin %}<a href="/admin" class="btn-outline btn-sm"><i class="fas fa-tachometer-alt"></i> پنل مدیریت</a>{% endif %}
+            <a href="/logout" class="btn-primary btn-sm">خروج</a>
+            {% else %}
+            <a href="/register" class="btn-outline btn-sm">ثبت‌نام</a>
+            <a href="/login" class="btn-primary btn-sm">ورود</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
+<div class="container" style="max-width:900px;margin:2.5rem auto;">
+    <div class="page-header">
+        <h1><i class="fas fa-check-circle" style="color:var(--primary);"></i> تأیید و پرداخت نهایی</h1>
+        <p>{{ count }} اقامتگاه برای رزرو — لطفاً جزئیات را بررسی و دکمه‌ی «تأیید و پرداخت» را بزنید</p>
+    </div>
+
+    <div class="checkout-steps">
+        <div class="checkout-step checkout-step-done">
+            <i class="fas fa-shopping-cart"></i> سبد خرید
+        </div>
+        <div class="checkout-step-arrow"><i class="fas fa-chevron-left"></i></div>
+        <div class="checkout-step checkout-step-active">
+            <i class="fas fa-credit-card"></i> تأیید و پرداخت
+        </div>
+        <div class="checkout-step-arrow"><i class="fas fa-chevron-left"></i></div>
+        <div class="checkout-step">
+            <i class="fas fa-check"></i> تکمیل رزرو
+        </div>
+    </div>
+
+    <div class="checkout-items">
+        {% for item in items %}
+        <div class="checkout-item-card">
+            <h3 class="checkout-item-title">
+                <i class="fas fa-home" style="color:var(--primary);"></i>
+                {{ item.title }}
+            </h3>
+            <p class="checkout-item-location">
+                <i class="fas fa-map-marker-alt" style="color:var(--accent);"></i> {{ item.location }}
+            </p>
+            <div class="checkout-item-meta">
+                <div class="meta-pill">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>ورود: <strong>{{ item.check_in_date }}</strong></span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>خروج: <strong>{{ item.check_out_date }}</strong></span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-moon"></i>
+                    <span><strong>{{ item.nights }}</strong> شب</span>
+                </div>
+                <div class="meta-pill">
+                    <i class="fas fa-users"></i>
+                    <span><strong>{{ item.guests }}</strong> مهمان
+                        {% if item.has_extra_guests %}
+                        <small style="color:var(--accent);">({{ item.extra_guests }} نفر اضافی)</small>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="checkout-item-pricing">
+                <div class="cart-price-row">
+                    <span>قیمت پایه ({{ item.nights }} شب)</span>
+                    <strong>{{ item.base_price }} تومان</strong>
+                </div>
+                {% if item.has_extra_guests %}
+                <div class="cart-price-row cart-price-extra">
+                    <span>هزینه‌ی مهمان اضافی</span>
+                    <strong>+{{ item.extra_guest_charge }} تومان</strong>
+                </div>
+                {% endif %}
+                <div class="cart-price-row cart-price-total">
+                    <span>مجموع این رزرو</span>
+                    <strong>{{ item.total_price }} تومان</strong>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="checkout-summary-card">
+        <h3><i class="fas fa-receipt" style="color:var(--primary);"></i> خلاصه‌ی پرداخت</h3>
+        <div class="cart-price-row cart-price-total" style="font-size:1.2rem;">
+            <span>مبلغ قابل پرداخت ({{ count }} رزرو)</span>
+            <strong>{{ total }} تومان</strong>
+        </div>
+        <div class="checkout-payment-info">
+            <i class="fas fa-info-circle"></i>
+            <p>با کلیک روی «تأیید و پرداخت»، رزروهای شما نهایی می‌شود و در صفحه‌ی «رزروهای من» قابل مشاهده خواهد بود. پرداخت آنلاین در نسخه‌ی فعلی شبیه‌سازی شده است.</p>
+        </div>
+        <form method="POST" action="/checkout" style="margin-top:1.5rem;">
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <a href="/cart" class="btn-ghost"><i class="fas fa-arrow-right"></i> بازگشت به سبد</a>
+                <button type="submit" class="btn-primary" style="flex:1;min-width:200px;">
+                    <i class="fas fa-check-circle"></i> تأیید و پرداخت ({{ total }} تومان)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</main>
+
+<footer class="main-footer">
+    <div class="footer-bottom">
+        <p>© ۱۴۰۴ جابامن — تمام حقوق محفوظ است.</p>
+    </div>
+</footer>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>
