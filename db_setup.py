@@ -12,6 +12,11 @@
 - جدول `cart` فیلدهای `check_in_date`, `check_out_date`, `guests` گرفت تا کاربر
   هنگام افزودن به سبد، تاریخ ورود/خروج و تعداد مهمان را وارد کند.
 - جدول جدید `reservations` برای ثبت نهایی رزروها ساخته شد.
+- فیلد `extra_guest_charge` به جدول properties اضافه شد تا هر میزبان بتواند
+  هزینه‌ی هر مهمان اضافی را برای اقامتگاه خودش به‌صورت مجزا تعیین کند.
+  (پیش‌فرض: ۱۰۰٬۰۰۰ تومان برای هر نفر در هر شب.)
+- فیلد `reservation_code` به جدول reservations اضافه شد — یک شناسه‌ی تصادفی
+  یکتا (مانند JAB-7XK2P9) که به‌جای شماره‌ی ردیف متوالی به کاربر نمایش داده می‌شود.
 """
 import sqlite3
 import os
@@ -46,6 +51,7 @@ EXPECTED_SCHEMA = {
         "amenities": "TEXT",
         "images": "TEXT",
         "is_reserved": "BOOLEAN DEFAULT 0",
+        "extra_guest_charge": "REAL DEFAULT 100000",
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "FOREIGN KEY (host_id)": "REFERENCES users(id) ON DELETE CASCADE"
@@ -98,6 +104,7 @@ EXPECTED_SCHEMA = {
     },
     "reservations": {
         "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "reservation_code": "TEXT UNIQUE",
         "user_id": "INTEGER NOT NULL",
         "property_id": "INTEGER NOT NULL",
         "check_in_date": "TEXT NOT NULL",
@@ -161,6 +168,7 @@ def create_tables(conn):
             amenities TEXT,
             images TEXT,
             is_reserved BOOLEAN DEFAULT 0,
+            extra_guest_charge REAL DEFAULT 100000,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE
@@ -213,6 +221,7 @@ def create_tables(conn):
         )""",
         """CREATE TABLE IF NOT EXISTS reservations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_code TEXT UNIQUE,
             user_id INTEGER NOT NULL,
             property_id INTEGER NOT NULL,
             check_in_date TEXT NOT NULL,

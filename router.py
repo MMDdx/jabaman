@@ -375,6 +375,43 @@ def process_get(path, user_id=None):
             formatted, user_id
         ))
 
+    if path == "/admin/reservations":
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        reservations = models.get_all_reservations()
+        status_fa_map = {
+            "confirmed": "تایید شده",
+            "cancelled": "لغو شده",
+            "completed": "تکمیل شده",
+        }
+        formatted = []
+        for r in reservations:
+            row = dict(r)
+            row["شناسه"] = r.get("id")
+            row["کد رزرو"] = r.get("reservation_code") or "—"
+            row["کاربر"] = r.get("user_name") or "—"
+            row["اقامتگاه"] = r.get("property_title") or "—"
+            row["ورود"] = r.get("check_in_date") or "—"
+            row["خروج"] = r.get("check_out_date") or "—"
+            row["شب"] = r.get("nights") or 1
+            row["مهمان"] = f"{r.get('guests') or 1}" + (
+                f" (+{r.get('extra_guests')})" if r.get("extra_guests") else ""
+            )
+            try:
+                row["مبلغ"] = f"{float(r.get('total_price') or 0):,.0f}"
+            except (TypeError, ValueError):
+                row["مبلغ"] = "0"
+            status_en = r.get("status") or "confirmed"
+            row["وضعیت"] = status_fa_map.get(status_en, status_en)
+            row["status"] = status_en
+            row["تاریخ ثبت"] = r.get("created_at")
+            formatted.append(row)
+        return Response.html(200, generate_table_html(
+            "رزروها",
+            ["شناسه", "کد رزرو", "کاربر", "اقامتگاه", "ورود", "خروج", "شب", "مهمان", "مبلغ", "وضعیت", "تاریخ ثبت"],
+            formatted, user_id
+        ))
+
     # ---------- مسیرهای داینامیک ----------
     params = match_route(path, "/property/<int:id>")
     if params:
@@ -465,7 +502,7 @@ def process_get(path, user_id=None):
         models.remove_from_wishlist(user_id, params['id'])
         return Response.redirect("/wishlist")
 
-    # ---------- لغو رزرو ----------
+    # ---------- لغو رزرو (توسط کاربر) ----------
     params = match_route(path, "/reservation/<int:id>/cancel")
     if params:
         if not _require_login(user_id):
@@ -474,6 +511,16 @@ def process_get(path, user_id=None):
         if not ok:
             return Response.html(400, generate_error_page(400, err, user_id))
         return Response.redirect("/reservations")
+
+    # ---------- لغو رزرو (توسط ادمین) ----------
+    params = match_route(path, "/admin/reservations/<int:id>/cancel")
+    if params:
+        if not _require_admin(user_id):
+            return Response.forbidden(user_id)
+        ok, err = models.cancel_reservation(params['id'], is_admin=True)
+        if not ok:
+            return Response.html(400, generate_error_page(400, err, user_id))
+        return Response.redirect("/admin/reservations")
 
     return None
 
@@ -676,7 +723,12 @@ def handle_logout_post(user_id):
 
 
 def handle_add_property(params, user_id, wants_json=False):
-    """host_id از نشست گرفته می‌شود، نه از فرم."""
+    """host_id از نشست گرفته می‌شود، نه از فرم.
+
+    فیلد اختیاری extra_guest_charge نیز از فرم خوانده می‌شود. اگر
+    وارد نشده بود، از DEFAULT_EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT
+    استفاده می‌شود.
+    """
     title = params.get('title', [''])[0].strip()
     description = params.get('description', [''])[0].strip()
     property_type = params.get('property_type', [''])[0].strip()
@@ -686,6 +738,7 @@ def handle_add_property(params, user_id, wants_json=False):
     bedrooms = params.get('bedrooms', ['0'])[0]
     bathrooms = params.get('bathrooms', ['0'])[0]
     amenities_list = params.get('amenities', [])
+    extra_guest_charge_raw = params.get('extra_guest_charge', [None])[0]
 
     def fail(msg, status=400):
         if wants_json:
@@ -699,12 +752,23 @@ def handle_add_property(params, user_id, wants_json=False):
         # جمع‌آوری امکانات به‌صورت لیست کاما جدا
         amenities = ",".join(amenities_list) if amenities_list else None
 
+        # اعتبارسنجی extra_guest_charge اگر وارد شده باشد
+        egc = None
+        if extra_guest_charge_raw not in (None, '', []):
+            try:
+                egc = float(extra_guest_charge_raw)
+                if egc < 0:
+                    return fail("هزینه‌ی مهمان اضافی نمی‌تواند منفی باشد.")
+            except ValueError:
+                return fail("فرمت هزینه‌ی مهمان اضافی نامعتبر است.")
+
         models.create_property(
             user_id,  # ← host_id از نشست
             title, description, property_type, location,
             float(price_per_night), int(max_guests),
             int(bedrooms), int(bathrooms),
-            amenities=amenities
+            amenities=amenities,
+            extra_guest_charge=egc
         )
         if wants_json:
             return Response.json(200, {"success": True, "redirect": "/catalog"})
@@ -741,6 +805,7 @@ def handle_edit_user(params, user_id):
 
 
 def handle_edit_property(params, property_id):
+    """به‌روزرسانی اقامتگاه — شامل فیلد extra_guest_charge که میزبان/ادمین می‌تواند تنظیم کند."""
     title = params.get('title', [''])[0].strip()
     description = params.get('description', [''])[0].strip()
     property_type = params.get('property_type', [''])[0].strip()
@@ -750,17 +815,29 @@ def handle_edit_property(params, property_id):
     bedrooms = params.get('bedrooms', ['0'])[0]
     bathrooms = params.get('bathrooms', ['0'])[0]
     amenities_list = params.get('amenities', [])
+    extra_guest_charge_raw = params.get('extra_guest_charge', [None])[0]
 
     if not all([title, property_type, location, price_per_night, max_guests]):
         return Response.html(400, "فیلدهای الزامی را پر کنید.")
 
     try:
         amenities = ",".join(amenities_list) if amenities_list else None
+        # اعتبارسنجی extra_guest_charge
+        egc = None
+        if extra_guest_charge_raw not in (None, '', []):
+            try:
+                egc = float(extra_guest_charge_raw)
+                if egc < 0:
+                    return Response.html(400, "هزینه‌ی مهمان اضافی نمی‌تواند منفی باشد.")
+            except ValueError:
+                return Response.html(400, "فرمت هزینه‌ی مهمان اضافی نامعتبر است.")
+
         models.update_property(
             property_id, title, description, property_type, location,
             float(price_per_night), int(max_guests),
             int(bedrooms), int(bathrooms),
-            amenities=amenities
+            amenities=amenities,
+            extra_guest_charge=egc
         )
         return Response.redirect("/admin/properties")
     except Exception as e:
@@ -775,6 +852,9 @@ def handle_add_to_cart(params, user_id):
     - check_in_date (YYYY-MM-DD)
     - check_out_date (YYYY-MM-DD)
     - guests (عدد)
+
+    اگر بازه‌ی انتخابی با رزروهای تاییدشده‌ی سایر کاربران هم‌پوشانی داشته
+    باشد، افزودن به سبد لغو می‌شود و یک پیام خطا نمایش داده می‌شود.
     """
     property_id = params.get('property_id', [None])[0]
     check_in = params.get('check_in_date', [None])[0]
@@ -805,7 +885,16 @@ def handle_add_to_cart(params, user_id):
         guests_int = 1
 
     try:
-        models.add_to_cart(user_id, property_id, check_in, check_out, guests_int)
+        success, err = models.add_to_cart(
+            user_id, property_id, check_in, check_out, guests_int
+        )
+        if not success:
+            # هم‌پوشانی تاریخ با رزروهای موجود
+            return Response.html(400, generate_error_page(
+                400,
+                "افزودن به سبد خرید ممکن نشد: " + (err or "تداخل تاریخ."),
+                user_id
+            ))
         return Response.redirect("/cart")
     except Exception as e:
         return Response.html(500, generate_error_page(500, str(e)))

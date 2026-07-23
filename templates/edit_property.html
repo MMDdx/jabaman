@@ -19,6 +19,7 @@
             <a href="/admin"><i class="fas fa-tachometer-alt"></i> داشبورد</a>
             <a href="/admin/users"><i class="fas fa-users"></i> کاربران</a>
             <a href="/admin/properties"><i class="fas fa-building"></i> اقامتگاه‌ها</a>
+            <a href="/admin/reservations"><i class="fas fa-calendar-check"></i> رزروها</a>
             <a href="/admin/comments"><i class="fas fa-comments"></i> نظرات</a>
             <a href="/admin/messages"><i class="fas fa-envelope"></i> پیام‌ها</a>
             <a href="/" class="btn-ghost btn-sm"><i class="fas fa-globe"></i> مشاهده سایت</a>
@@ -86,6 +87,17 @@
                 <div class="form-group">
                     <label>سرویس بهداشتی</label>
                     <input type="number" name="bathrooms" class="form-control" value="{{ property.bathrooms }}" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>هزینه‌ی هر مهمان اضافی (تومان / نفر / شب)</label>
+                    <input type="number" name="extra_guest_charge" class="form-control" value="{{ property.extra_guest_charge }}" min="0" step="1000">
+                    <small style="color:var(--text-muted);font-size:0.85rem;display:block;margin-top:0.25rem;">
+                        <i class="fas fa-info-circle"></i>
+                        اگر تعداد مهمان از ظرفیت استاندارد ({{ property.max_guests }} نفر) بیشتر باشد،
+                        برای هر نفر اضافی، این مبلغ در هر شب محاسبه می‌شود.
+                    </small>
                 </div>
             </div>
             <button type="submit" class="submit-btn">

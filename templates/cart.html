@@ -41,15 +41,24 @@
     </div>
 
     {% if items %}
+    {% if has_any_overlap %}
+    <div class="alert alert-warning" style="margin-bottom:1.5rem;">
+        <strong><i class="fas fa-exclamation-triangle"></i> توجه:</strong>
+        برخی آیتم‌های سبد شما با رزروهای موجود تداخل تاریخ دارند. لطفاً پیش از پرداخت،
+        آن آیتم‌ها را از سبد حذف کنید و با تاریخ دیگری مجدداً افزودن کنید.
+    </div>
+    {% endif %}
     <div class="cart-items-list">
         {% for item in items %}
-        <div class="cart-item-card{% if item.is_reserved %} cart-item-reserved{% endif %}">
+        <div class="cart-item-card{% if item.has_overlap %} cart-item-reserved{% endif %}">
             <div class="cart-item-header">
                 <div>
                     <h3 class="cart-item-title">
                         <a href="/property/{{ item.property_id }}">{{ item.title }}</a>
-                        {% if item.is_reserved %}
-                        <span class="badge badge-reserved"><i class="fas fa-lock"></i> رزرو شده</span>
+                        {% if item.has_overlap %}
+                        <span class="badge badge-reserved"><i class="fas fa-exclamation-triangle"></i> تداخل تاریخ</span>
+                        {% else %}
+                        <span class="badge badge-available"><i class="fas fa-check-circle"></i> قابل رزرو</span>
                         {% endif %}
                     </h3>
                     <p class="cart-item-location">
@@ -60,6 +69,13 @@
                     <i class="fas fa-trash"></i> حذف
                 </a>
             </div>
+
+            {% if item.has_overlap %}
+            <div class="alert alert-danger" style="margin:0.75rem 0;padding:0.75rem 1rem;font-size:0.9rem;">
+                <i class="fas fa-info-circle"></i>
+                <strong>تداخل تاریخ:</strong> {{ item.overlap_message }}
+            </div>
+            {% endif %}
 
             <div class="cart-item-dates">
                 <div class="cart-date-box">

@@ -108,11 +108,18 @@ def generate_catalog_html(title, properties, user_id=None):
 
 
 def generate_property_detail(prop, comments, user_id=None):
-    """prop و comments باید dict باشند."""
+    """prop و comments باید dict باشند.
+
+    نکته: در نسخه‌ی جدید، اقامتگاه به‌جای یک فلگ is_reserved کلی، بر اساس
+    بازه‌های تاریخی رزرو می‌شود. بنابراین badge «رزرو شده» حذف شده و به‌جای
+    آن، لیست تاریخ‌های رزروشده به کاربر نمایش داده می‌شود تا بداند کدام
+    بازه‌ها قابل انتخاب نیستند.
+    """
     if hasattr(prop, "keys"):
         prop = dict(prop)
     prop["price_per_night_fmt"] = _fmt_price(prop.get("price_per_night"))
-    # نمایش وضعیت رزرو
+    # is_reserved فقط یک علامت سریع است که «حداقل یک رزرو فعال» دارد.
+    # این مقدار دیگر برای تصمیم نهایی استفاده نمی‌شود.
     prop["is_reserved"] = bool(prop.get("is_reserved"))
     # محاسبه‌ی حداکثر مهمان مجاز (۳ برابر ظرفیت استاندارد)
     try:
@@ -120,6 +127,15 @@ def generate_property_detail(prop, comments, user_id=None):
     except (TypeError, ValueError):
         mg = 1
     prop["max_guests_x3"] = mg * 3
+    # هزینه‌ی مهمان اضافی اختصاصی همین اقامتگاه
+    # اگر مقدار نبود، از پیش‌فرض سراسری استفاده می‌کنیم
+    try:
+        egc = float(prop.get("extra_guest_charge")
+                    or models.DEFAULT_EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT)
+    except (TypeError, ValueError):
+        egc = float(models.DEFAULT_EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT)
+    prop["extra_guest_charge"] = egc
+    prop["extra_guest_charge_fmt"] = _fmt_price(egc)
     # گرفتن رزروهای آینده‌ی این اقامتگاه برای نمایش در صفحه
     upcoming_reservations = []
     try:
@@ -137,8 +153,10 @@ def generate_property_detail(prop, comments, user_id=None):
     ctx["comments"] = norm_comments
     ctx["comments_count"] = len(norm_comments)
     ctx["upcoming_reservations"] = upcoming_reservations
-    ctx["extra_guest_charge"] = models.EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT
-    ctx["extra_guest_charge_fmt"] = _fmt_price(models.EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT)
+    ctx["upcoming_reservations_count"] = len(upcoming_reservations)
+    # مقدار عددی extra_guest_charge برای استفاده در JavaScript (پیش‌نمایش قیمت)
+    ctx["extra_guest_charge"] = egc
+    ctx["extra_guest_charge_fmt"] = _fmt_price(egc)
     return render_template("property_detail.html", ctx)
 
 
@@ -181,13 +199,24 @@ def generate_login_redirect_page():
 # ========================
 
 def generate_cart_page(cart_items, user_id=None):
-    """ساخت صفحه‌ی سبد خرید با نمایش تاریخ‌ها، تعداد مهمان و قیمت محاسبه‌شده."""
+    """ساخت صفحه‌ی سبد خرید با نمایش تاریخ‌ها، تعداد مهمان و قیمت محاسبه‌شده.
+
+    نکته: در نسخه‌ی جدید، اقامتگاه بر اساس بازه‌ی تاریخی رزرو می‌شود، نه کل
+    اقامتگاه. بنابراین در سبد خرید، آن آیتم‌هایی که با رزروهای تاییدشده‌ی
+    سایر کاربران هم‌پوشانی دارند با هشدار «تداخل تاریخ» نمایش داده می‌شوند
+    تا کاربر بداند قبل از پرداخت باید تاریخ را تغییر دهد.
+    """
     items = []
     grand_total = 0
+    has_any_overlap = False
     for item in cart_items:
         total = float(item.get("total_price") or 0)
         grand_total += total
         extra_guests = item.get("extra_guests") or 0
+        # has_overlap از models.get_cart_items محاسبه شده است
+        has_overlap = bool(item.get("has_overlap"))
+        if has_overlap:
+            has_any_overlap = True
         items.append({
             "cart_id": item.get("cart_id"),
             "property_id": item.get("property_id"),
@@ -205,11 +234,16 @@ def generate_cart_page(cart_items, user_id=None):
             "has_extra_guests": extra_guests > 0,
             "extra_guest_charge": _fmt_price(item.get("extra_guest_charge")),
             "total_price": _fmt_price(total),
+            # هم‌پوشانی با رزروهای تاییدشده‌ی سایر کاربران
+            "has_overlap": has_overlap,
+            "overlap_message": item.get("overlap_message") or "",
+            # is_reserved نگه داشته شده برای backward-compat
             "is_reserved": bool(item.get("is_reserved")),
         })
     ctx = _base_context(user_id)
     ctx["items"] = items
     ctx["total"] = _fmt_price(grand_total)
+    ctx["has_any_overlap"] = has_any_overlap
     return render_template("cart.html", ctx)
 
 
@@ -253,7 +287,11 @@ def generate_checkout_success_page(reservation_ids, errors, user_id=None):
 
 
 def generate_reservations_page(reservations, user_id=None):
-    """صفحه‌ی «رزروهای من» — لیست رزروهای کاربر با امکان لغو."""
+    """صفحه‌ی «رزروهای من» — لیست رزروهای کاربر با امکان لغو.
+
+    هر رزرو یک reservation_code تصادفی یکتا (مانند JAB-7XK2P9) دارد که
+    به‌جای شماره‌ی ردیف متوالی به کاربر نشان داده می‌شود.
+    """
     items = []
     for r in reservations:
         if hasattr(r, "keys"):
@@ -262,6 +300,7 @@ def generate_reservations_page(reservations, user_id=None):
         status = r.get("status") or "confirmed"
         items.append({
             "id": r.get("id"),
+            "reservation_code": r.get("reservation_code") or f"JAB-{r.get('id'):06d}",
             "property_id": r.get("property_id"),
             "property_title": r.get("property_title") or "—",
             "property_location": r.get("property_location") or "—",

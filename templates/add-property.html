@@ -121,6 +121,20 @@
             </div>
 
             <div class="form-group">
+                <label for="extra_guest_charge">
+                    هزینه‌ی هر مهمان اضافی (تومان / نفر / شب)
+                    <i class="fas fa-info-circle" style="color:var(--text-muted);cursor:help;"
+                       title="اگر تعداد مهمان از ظرفیت استاندارد بیشتر باشد، این مبلغ برای هر نفر اضافی در هر شب محاسبه می‌شود."></i>
+                </label>
+                <input type="number" id="extra_guest_charge" name="extra_guest_charge" class="form-control"
+                       placeholder="پیش‌فرض: ۱۰۰٬۰۰۰ تومان" min="0" step="1000">
+                <small style="color:var(--text-muted);font-size:0.85rem;display:block;margin-top:0.25rem;">
+                    اگر خالی بگذارید، مقدار پیش‌فرض ۱۰۰٬۰۰۰ تومان برای هر نفر اضافی در هر شب اعمال می‌شود.
+                    می‌توانید برای اقامتگاه‌های لوکس‌تر مقدار بالاتر و برای اقامتگاه‌های اقتصادی مقدار کمتری تنظیم کنید.
+                </small>
+            </div>
+
+            <div class="form-group">
                 <label>امکانات اقامتگاه</label>
                 <div class="amenities-grid">
                     <div class="amenity-item">

@@ -63,12 +63,16 @@
 
         {% if reservation_ids %}
         <div class="reservation-ids-box">
-            <h4><i class="fas fa-hashtag"></i> کدهای رزرو:</h4>
+            <h4><i class="fas fa-hashtag"></i> کدهای رزرو شما:</h4>
             <div class="reservation-ids-list">
                 {% for rid in reservation_ids %}
-                <span class="reservation-id-pill">#{{ rid }}</span>
+                <span class="reservation-id-pill">{{ rid.reservation_code }}</span>
                 {% endfor %}
             </div>
+            <p style="margin-top:0.75rem;font-size:0.9rem;color:var(--text-muted);">
+                <i class="fas fa-info-circle"></i>
+                این کد را برای پیگیری رزرو خود نگه دارید. هر رزرو یک شناسه‌ی تصادفی یکتا دارد.
+            </p>
         </div>
         {% endif %}
 

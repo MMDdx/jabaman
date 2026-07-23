@@ -40,8 +40,8 @@
         <div>
             <h1>
                 {{ property.title }}
-                {% if property.is_reserved %}
-                <span class="badge badge-reserved"><i class="fas fa-lock"></i> رزرو شده</span>
+                {% if upcoming_reservations %}
+                <span class="badge badge-available"><i class="fas fa-calendar-check"></i> قابل رزرو در تاریخ‌های آزاد</span>
                 {% else %}
                 <span class="badge badge-available"><i class="fas fa-check-circle"></i> قابل رزرو</span>
                 {% endif %}
@@ -63,12 +63,13 @@
     {% if upcoming_reservations %}
     <div class="reserved-dates-box">
         <h3><i class="fas fa-calendar-times" style="color:var(--danger);"></i> تاریخ‌های رزروشده</h3>
-        <p class="reserved-dates-hint">این اقامتگاه در تاریخ‌های زیر توسط کاربران دیگر رزرو شده است. لطفاً بازه‌ی دیگری انتخاب کنید.</p>
+        <p class="reserved-dates-hint">این اقامتگاه در بازه‌های زیر توسط کاربران دیگر رزرو شده است. بقیه‌ی تاریخ‌ها همچنان قابل رزرو هستند — لطفاً بازه‌ی دیگری انتخاب کنید.</p>
         <ul class="reserved-dates-list">
             {% for r in upcoming_reservations %}
             <li>
                 <i class="fas fa-calendar-day"></i>
                 از <strong>{{ r.check_in_date }}</strong> تا <strong>{{ r.check_out_date }}</strong>
+                {% if r.reservation_code %}<small style="color:var(--text-muted);">— کد رزرو: {{ r.reservation_code }}</small>{% endif %}
             </li>
             {% endfor %}
         </ul>
@@ -97,7 +98,7 @@
                     <input type="number" id="guests" name="guests" class="form-control" min="1" max="{{ property.max_guests_x3 }}" value="1" required>
                     <small style="color:var(--text-muted);font-size:0.85rem;display:block;margin-top:0.25rem;">
                         ظرفیت استاندارد: {{ property.max_guests }} نفر.
-                        برای هر مهمان اضافی، {{ extra_guest_charge_fmt }} تومان در هر شب اضافه می‌شود.
+                        برای هر مهمان اضافی، {{ property.extra_guest_charge_fmt }} تومان در هر شب اضافه می‌شود.
                     </small>
                 </div>
             </div>
@@ -208,10 +209,33 @@
     var preview = document.getElementById('price-preview');
     var pricePerNight = parseFloat("{{ property.price_per_night }}") || 0;
     var maxGuests = parseInt("{{ property.max_guests }}") || 1;
-    var extraChargePerGuest = parseInt("{{ extra_guest_charge }}") || 100000;
+    // هزینه‌ی مهمان اضافی اختصاصی همین اقامتگاه
+    var extraChargePerGuest = parseFloat("{{ extra_guest_charge }}") || 100000;
+
+    // لیست بازه‌های رزروشده برای بررسی هم‌پوشانی در سمت کلاینت
+    // (ترتیب آخرین کاما در JS مشکلی ایجاد نمی‌کند)
+    var reservedRanges = [
+        {% for r in upcoming_reservations %}
+        { start: "{{ r.check_in_date }}", end: "{{ r.check_out_date }}" },
+        {% endfor %}
+    ];
 
     function fmt(num) {
         return num.toLocaleString('fa-IR');
+    }
+
+    function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+        // هم‌پوشانی: A.start < B.end AND B.start < A.end
+        return new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);
+    }
+
+    function findOverlap(checkIn, checkOut) {
+        for (var i = 0; i < reservedRanges.length; i++) {
+            if (rangesOverlap(checkIn, checkOut, reservedRanges[i].start, reservedRanges[i].end)) {
+                return reservedRanges[i];
+            }
+        }
+        return null;
     }
 
     function updatePreview() {
@@ -255,7 +279,7 @@
         checkOut.setAttribute('min', today);
     }
 
-    // اعتبارسنجی قبل از ارسال
+    // اعتبارسنجی قبل از ارسال — شامل بررسی هم‌پوشانی تاریخ‌ها
     var form = document.getElementById('add-to-cart-form');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -275,6 +299,13 @@
             if (g < 1) {
                 e.preventDefault();
                 alert('تعداد مهمان باید حداقل ۱ باشد.');
+                return;
+            }
+            // بررسی هم‌پوشانی با رزروهای موجود
+            var overlap = findOverlap(checkIn.value, checkOut.value);
+            if (overlap) {
+                e.preventDefault();
+                alert('بازه‌ی انتخابی شما از ' + overlap.start + ' تا ' + overlap.end + ' با رزروی موجود هم‌پوشانی دارد.\nلطفاً بازه‌ی دیگری انتخاب کنید.');
                 return;
             }
         });
