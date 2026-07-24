@@ -97,6 +97,27 @@ def seed():
         comments
     )
 
+    # ۸. تصاویر نمونه‌ی اقامتگاه‌ها
+    # برای هر اقامتگاه ۳ تصویر در جدول property_images ثبت می‌شود.
+    # این فایل‌ها در مسیر static/uploads/properties/ واقعاً وجود دارند
+    # و توسط اسکریپت scripts/generate_sample_property_images.py تولید شده‌اند.
+    property_images = []
+    for pid in [1, 2, 3, 4]:
+        for n in [1, 2, 3]:
+            property_images.append((
+                pid,
+                f"/static/uploads/properties/p{pid}_seed_{n}.jpg",
+                None,         # caption
+                n - 1         # sort_order (۰، ۱، ۲)
+            ))
+    # ابتدا پاک‌سازی احتمالی رکوردهای قبلی برای جلوگیری از تکرار
+    cursor.execute("DELETE FROM property_images WHERE property_id IN (1,2,3,4)")
+    cursor.executemany(
+        "INSERT INTO property_images (property_id, image_path, caption, sort_order) "
+        "VALUES (?, ?, ?, ?)",
+        property_images
+    )
+
     conn.commit()
     conn.close()
 

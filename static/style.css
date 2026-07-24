@@ -2364,3 +2364,540 @@ input[type="file"] {
         gap: 0.5rem;
     }
 }
+
+/* ============================================================
+   سیستم گالری تصاویر اقامتگاه
+   ============================================================ */
+
+/* ---------- تصویر شاخص در کارت کاتالوگ/خانه ---------- */
+.card-image-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+.property-card:hover .card-image-img {
+    transform: scale(1.06);
+}
+.card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
+}
+
+/* ============================================================
+   گالری صفحه‌ی جزئیات اقامتگاه
+   ============================================================ */
+.property-gallery {
+    margin: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.gallery-main {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    background: var(--bg-muted);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+.gallery-main-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s ease;
+}
+.gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 118, 110, 0.85);
+    color: white;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all var(--transition);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2;
+}
+.gallery-nav:hover {
+    background: var(--primary);
+    transform: translateY(-50%) scale(1.1);
+}
+.gallery-nav-prev {
+    right: 1rem;
+}
+.gallery-nav-next {
+    left: 1rem;
+}
+.gallery-counter {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.3rem 0.9rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2;
+}
+
+/* تامنیل‌های گالری */
+.gallery-thumbs {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.gallery-thumb {
+    width: 90px;
+    height: 60px;
+    border: 3px solid transparent;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    background: var(--bg-muted);
+    transition: all var(--transition);
+    opacity: 0.6;
+}
+.gallery-thumb:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+.gallery-thumb.active {
+    border-color: var(--primary);
+    opacity: 1;
+    box-shadow: var(--shadow-sm);
+}
+.gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* حالت خالی (بدون تصویر) */
+.property-gallery-empty {
+    aspect-ratio: 16 / 6;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-soft);
+}
+.gallery-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    gap: 0.5rem;
+}
+.gallery-placeholder i {
+    font-size: 3rem;
+    opacity: 0.4;
+}
+.gallery-placeholder p {
+    font-size: 0.95rem;
+}
+
+/* ============================================================
+   بخش گالری در صفحه ویرایش (admin)
+   ============================================================ */
+.form-section {
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-soft);
+}
+.form-section-title {
+    font-size: 1.1rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+.image-counter-badge {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    padding: 0.2rem 0.7rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-right: auto;
+}
+
+/* گرید گالری در پنل ادمین */
+.admin-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.admin-gallery-item {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    background: var(--bg-muted);
+    border: 1px solid var(--border-soft);
+}
+.admin-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.admin-gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.7) 0%,
+        rgba(0, 0, 0, 0) 40%
+    );
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0.6rem;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+.admin-gallery-item:hover .admin-gallery-overlay {
+    opacity: 1;
+}
+.badge-featured {
+    background: var(--accent);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: var(--shadow-sm);
+}
+.btn-delete-image {
+    background: var(--danger);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+.btn-delete-image:hover {
+    background: var(--danger-dark, #b91c1c);
+    transform: scale(1.1);
+}
+
+/* جعبه "بدون تصویر" */
+.no-images-box {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+}
+.no-images-box i {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    opacity: 0.4;
+}
+.no-images-box p {
+    font-size: 0.95rem;
+}
+.image-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--info-soft);
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    margin-top: 0.75rem;
+    border-right: 3px solid var(--info);
+    line-height: 1.7;
+}
+
+/* ============================================================
+   فرم آپلود تصویر
+   ============================================================ */
+.image-input {
+    padding: 0.5rem;
+    background: var(--bg-card);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.image-input:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+}
+.image-input::-webkit-file-upload-button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    transition: background var(--transition);
+}
+.image-input::-webkit-file-upload-button:hover {
+    background: var(--primary-dark);
+}
+.image-input::file-selector-button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    transition: background var(--transition);
+}
+.image-input::file-selector-button:hover {
+    background: var(--primary-dark);
+}
+
+/* پیش‌نمایش تصاویر انتخاب‌شده قبل از آپلود */
+.image-preview-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+.image-preview-item {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+.image-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.image-preview-remove {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: all var(--transition);
+}
+.image-preview-remove:hover {
+    background: var(--danger);
+    transform: scale(1.15);
+}
+.image-preview-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: var(--primary);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* نام فایل و حجم در پیش‌نمایش */
+.image-preview-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 1.5rem 0.4rem 0.3rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: ltr;
+}
+.image-preview-size {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-pill);
+    direction: ltr;
+}
+.image-preview-counter {
+    grid-column: 1 / -1;
+    background: var(--bg-soft);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    border: 1px dashed var(--primary);
+}
+
+/* ============================================================
+   Drop Zone برای آپلود تصاویر
+   ============================================================ */
+.image-dropzone {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    padding: 0;
+    cursor: pointer;
+    transition: all var(--transition);
+    overflow: hidden;
+}
+.image-dropzone:hover {
+    border-color: var(--primary);
+    background: rgba(20, 184, 166, 0.05);
+}
+.image-dropzone.dropzone-dragover {
+    border-color: var(--primary);
+    background: rgba(20, 184, 166, 0.12);
+    transform: scale(1.01);
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.15);
+}
+.image-dropzone.dropzone-full {
+    border-color: var(--text-muted);
+    background: var(--bg-muted);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.image-dropzone.dropzone-full .dropzone-icon {
+    color: var(--text-muted);
+}
+.image-dropzone.dropzone-full .dropzone-title {
+    color: var(--text-muted);
+}
+
+.dropzone-inner {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+.dropzone-icon {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+    transition: all var(--transition);
+}
+.image-dropzone:hover .dropzone-icon {
+    transform: translateY(-3px) scale(1.05);
+}
+.dropzone-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.6;
+    max-width: 380px;
+}
+.dropzone-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+.dropzone-btn {
+    margin-top: 0.5rem;
+    pointer-events: none;  /* کلیک روی دکمه هم dropzone را فعال کند */
+}
+.dropzone-formats {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0.5rem 0 0;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .dropzone-inner {
+        padding: 1.5rem 1rem;
+    }
+    .dropzone-icon {
+        font-size: 2rem;
+    }
+    .dropzone-title {
+        font-size: 0.85rem;
+    }
+}
+
+/* ============================================================
+   ریسپانسیو
+   ============================================================ */
+@media (max-width: 768px) {
+    .gallery-main {
+        aspect-ratio: 4 / 3;
+    }
+    .gallery-nav {
+        width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+    }
+    .gallery-thumb {
+        width: 64px;
+        height: 48px;
+    }
+    .admin-gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 0.6rem;
+    }
+    .image-preview-list {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+}

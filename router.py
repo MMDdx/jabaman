@@ -10,6 +10,8 @@
 - login_redirect هم از قالب با JS خارجی (login_redirect.js) استفاده می‌کند.
 """
 import json
+import os
+import uuid
 import urllib.parse
 import re
 import sqlite3
@@ -37,24 +39,35 @@ def _parse_form_body(body, content_type=None):
     """تجزیه‌ی بدنه‌ی POST با پشتیبانی از هر دو فرمت:
 
     1. application/x-www-form-urlencoded  (پیش‌فرض HTML forms)
-    2. multipart/form-data  (FormData در fetch)
+    2. multipart/form-data  (FormData در fetch، شامل فایل آپلودی)
 
     خروجی: dict شبیه parse_qs با مقادیر لیست.
+    برای فایل‌های آپلودی، مقدار یک dict است:
+        {"filename": "x.jpg", "data": b"..."}
     """
     if not body:
         return {}
 
+    # اگر Content-Type مشخص می‌کند که multipart است، مستقیم به _parse_multipart بفرست
+    # نکته: در موارد multipart با فایل باینری، decode UTF-8 ناموفق است،
+    # پس باید قبل از تلاش برای decode بررسی کنیم.
+    if content_type and "multipart/form-data" in content_type.lower():
+        return _parse_multipart(body, content_type)
+
+    # اگر body از نوع bytes است، آن را به متن تبدیل کن
     if isinstance(body, bytes):
         try:
             text = body.decode("utf-8")
         except UnicodeDecodeError:
+            # ممکن است multipart بدون Content-Type درست باشد؛ تلاش برای تشخیص
+            if body[:50].find(b"------") != -1 and body[:200].find(b"Content-Disposition") != -1:
+                return _parse_multipart(body, content_type)
             return {}
     else:
         text = body
 
-    # اگر multipart است
-    if (content_type and "multipart/form-data" in content_type.lower()) or \
-       (not content_type and "------" in text[:200] and "Content-Disposition" in text[:500]):
+    # تشخیص multipart بدون Content-Type (برای backward-compat)
+    if not content_type and "------" in text[:200] and "Content-Disposition" in text[:500]:
         return _parse_multipart(body, content_type)
 
     # در غیر این صورت URL-encoded
@@ -62,7 +75,13 @@ def _parse_form_body(body, content_type=None):
 
 
 def _parse_multipart(body, content_type):
-    """پارسر ساده‌ی multipart/form-data (بدون کتابخانه خارجی)."""
+    """پارسر ساده‌ی multipart/form-data (بدون کتابخانه خارجی).
+
+    خروجی: dict با مقادیر لیست.
+    - برای فیلدهای متنی: مقدار یک str است.
+    - برای فایل‌های آپلودی: مقدار یک dict است:
+        {"filename": "x.jpg", "data": b"..."}
+    """
     if isinstance(body, str):
         body = body.encode("utf-8")
 
@@ -110,10 +129,20 @@ def _parse_multipart(body, content_type):
             continue
         name = m.group(1).decode("utf-8", errors="ignore")
 
-        # اگر filename داشت (فایل آپلودی) → رد می‌کنیم
-        if b"filename=" in header_blob:
+        # استخراج filename اگر وجود داشت (فایل آپلودی)
+        m_fn = re.search(rb'filename="([^"]*)"', header_blob)
+        if m_fn:
+            filename = m_fn.group(1).decode("utf-8", errors="ignore")
+            # فیلد خالی (هیچ فایلی انتخاب نشده) → نادیده بگیر
+            if not filename and not value:
+                continue
+            result.setdefault(name, []).append({
+                "filename": filename,
+                "data": value
+            })
             continue
 
+        # فیلد متنی معمولی
         try:
             value_str = value.decode("utf-8")
         except UnicodeDecodeError:
@@ -207,6 +236,85 @@ def _require_admin(user_id):
     if not user_id:
         return False
     return models.is_admin(user_id)
+
+
+# ========================
+#   تنظیمات آپلود تصاویر
+# ========================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "properties")
+# حداکثر اندازه‌ی هر فایل: ۵ مگابایت
+MAX_IMAGE_SIZE = 5 * 1024 * 1024
+# پسوندهای مجاز
+ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
+def _allowed_image_filename(filename):
+    """بررسی اینکه فایل با پسوند مجاز است."""
+    if not filename:
+        return False
+    ext = os.path.splitext(filename.lower())[1]
+    return ext in ALLOWED_IMAGE_EXTS
+
+
+def _save_uploaded_image(file_info, property_id):
+    """ذخیره‌ی یک فایل آپلودی روی دیسک و بازگرداندن مسیر عمومی.
+
+    file_info: dict با کلیدهای filename و data (bytes).
+    property_id: شناسه‌ی اقامتگاه (برای ساخت نام یکتا).
+
+    خروجی: مسیر عمومی (مثل /static/uploads/properties/p12_abc123.jpg)
+    یا None در صورت خطا.
+    """
+    if not file_info or not isinstance(file_info, dict):
+        return None
+    data = file_info.get("data")
+    filename = file_info.get("filename") or ""
+    if not data or not filename:
+        return None
+    if len(data) > MAX_IMAGE_SIZE:
+        return None
+    if not _allowed_image_filename(filename):
+        return None
+
+    # ساخت نام یکتا: p{property_id}_{uuid8}.{ext}
+    ext = os.path.splitext(filename.lower())[1]
+    unique_name = f"p{property_id}_{uuid.uuid4().hex[:8]}{ext}"
+
+    # اطمینان از وجود دایرکتوری
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    except OSError:
+        return None
+
+    file_path = os.path.join(UPLOAD_DIR, unique_name)
+    try:
+        with open(file_path, "wb") as f:
+            f.write(data)
+    except OSError:
+        return None
+
+    # مسیر عمومی (همان URL)
+    return f"/static/uploads/properties/{unique_name}"
+
+
+def _delete_image_file(image_path):
+    """حذف فایل فیزیکی تصویر از روی دیسک.
+
+    image_path: مسیر عمومی مثل /static/uploads/properties/p12_abc.jpg
+    """
+    if not image_path:
+        return
+    # فقط اجازه‌ی حذف فایل از مسیر uploads را می‌دهیم (امنیت)
+    if not image_path.startswith("/static/uploads/properties/"):
+        return
+    rel = image_path[len("/static/"):]
+    abs_path = os.path.join(BASE_DIR, "static", rel.replace("/", os.sep))
+    try:
+        if os.path.exists(abs_path) and os.path.isfile(abs_path):
+            os.remove(abs_path)
+    except OSError:
+        pass
 
 
 # ========================
@@ -451,12 +559,23 @@ def process_get(path, user_id=None):
         return Response.html(200, generate_edit_property_form(prop, user_id))
 
     # ---------- مسیرهای حذف (ادمین) ----------
-    # حذف اقامتگاه
+    # حذف اقامتگاه — ابتدا تصاویر فیزیکی، سپس رکورد دیتابیس
     params = match_route(path, "/admin/properties/<int:id>/delete")
     if params:
         if not _require_admin(user_id):
             return Response.forbidden(user_id)
-        models.delete_property(params['id'])
+        pid = params['id']
+        # گرفتن مسیرهای فایل قبل از حذف از DB
+        image_paths = []
+        try:
+            for img in models.get_property_images(pid):
+                image_paths.append(img.get('image_path'))
+        except Exception:
+            pass
+        models.delete_property(pid)
+        # حذف فایل‌های فیزیکی پس از حذف موفق از DB
+        for p in image_paths:
+            _delete_image_file(p)
         return Response.redirect("/admin/properties")
 
     # حذف کاربر
@@ -574,6 +693,13 @@ def process_post(path, body, user_id=None, headers=None):
         if not _require_admin(user_id):
             return Response.forbidden(user_id)
         return handle_edit_property(params, p['id'])
+
+    # ---------- حذف تصویر یک اقامتگاه (ادمین یا میزبان) ----------
+    p = match_route(path, "/property/<int:property_id>/images/<int:image_id>/delete")
+    if p:
+        if not _require_login(user_id):
+            return Response.login_required()
+        return handle_delete_property_image(p['property_id'], p['image_id'], user_id)
 
     return Response.html(404, generate_error_page(404, user_id=user_id))
 
@@ -728,17 +854,33 @@ def handle_add_property(params, user_id, wants_json=False):
     فیلد اختیاری extra_guest_charge نیز از فرم خوانده می‌شود. اگر
     وارد نشده بود، از DEFAULT_EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT
     استفاده می‌شود.
+
+    این هندلر همچنین تصاویر آپلودی را (تا ۳ عدد) در فیلد "images"
+    دریافت و ذخیره می‌کند.
     """
-    title = params.get('title', [''])[0].strip()
-    description = params.get('description', [''])[0].strip()
-    property_type = params.get('property_type', [''])[0].strip()
-    location = params.get('location', [''])[0].strip()
-    price_per_night = params.get('price_per_night', ['0'])[0]
-    max_guests = params.get('max_guests', ['1'])[0]
-    bedrooms = params.get('bedrooms', ['0'])[0]
-    bathrooms = params.get('bathrooms', ['0'])[0]
-    amenities_list = params.get('amenities', [])
-    extra_guest_charge_raw = params.get('extra_guest_charge', [None])[0]
+    # ممکن است مقدار params یک dict باشد (متن) یا یک فایل آپلودی
+    def get_text(key, default=''):
+        v = params.get(key)
+        if not v:
+            return default
+        val = v[0]
+        if isinstance(val, dict):
+            return default  # این یک فایل است، نه متن
+        if val is None:
+            return default
+        return val.strip() if hasattr(val, 'strip') else str(val)
+
+    title = get_text('title')
+    description = get_text('description')
+    property_type = get_text('property_type')
+    location = get_text('location')
+    price_per_night = get_text('price_per_night', '0') or '0'
+    max_guests = get_text('max_guests', '1') or '1'
+    bedrooms = get_text('bedrooms', '0') or '0'
+    bathrooms = get_text('bathrooms', '0') or '0'
+    amenities_list = [v for v in params.get('amenities', []) if isinstance(v, str)]
+    extra_guest_charge_raw = get_text('extra_guest_charge', None)
+    image_files = params.get('images', [])  # لیست فایل‌های آپلودی
 
     def fail(msg, status=400):
         if wants_json:
@@ -754,15 +896,15 @@ def handle_add_property(params, user_id, wants_json=False):
 
         # اعتبارسنجی extra_guest_charge اگر وارد شده باشد
         egc = None
-        if extra_guest_charge_raw not in (None, '', []):
+        if extra_guest_charge_raw is not None and extra_guest_charge_raw != '':
             try:
                 egc = float(extra_guest_charge_raw)
                 if egc < 0:
                     return fail("هزینه‌ی مهمان اضافی نمی‌تواند منفی باشد.")
-            except ValueError:
+            except (ValueError, TypeError):
                 return fail("فرمت هزینه‌ی مهمان اضافی نامعتبر است.")
 
-        models.create_property(
+        property_id = models.create_property(
             user_id,  # ← host_id از نشست
             title, description, property_type, location,
             float(price_per_night), int(max_guests),
@@ -770,6 +912,26 @@ def handle_add_property(params, user_id, wants_json=False):
             amenities=amenities,
             extra_guest_charge=egc
         )
+
+        # ذخیره‌ی تصاویر آپلودی (تا MAX_PROPERTY_IMAGES)
+        if property_id and image_files:
+            saved_count = 0
+            for f in image_files:
+                if saved_count >= models.MAX_PROPERTY_IMAGES:
+                    break
+                if not isinstance(f, dict) or not f.get('filename'):
+                    continue
+                if not f.get('data'):
+                    continue
+                if not _allowed_image_filename(f.get('filename')):
+                    continue
+                if len(f['data']) > MAX_IMAGE_SIZE:
+                    continue
+                saved_path = _save_uploaded_image(f, property_id)
+                if saved_path:
+                    if models.add_property_image(property_id, saved_path):
+                        saved_count += 1
+
         if wants_json:
             return Response.json(200, {"success": True, "redirect": "/catalog"})
         return Response.redirect("/catalog")
@@ -805,17 +967,33 @@ def handle_edit_user(params, user_id):
 
 
 def handle_edit_property(params, property_id):
-    """به‌روزرسانی اقامتگاه — شامل فیلد extra_guest_charge که میزبان/ادمین می‌تواند تنظیم کند."""
-    title = params.get('title', [''])[0].strip()
-    description = params.get('description', [''])[0].strip()
-    property_type = params.get('property_type', [''])[0].strip()
-    location = params.get('location', [''])[0].strip()
-    price_per_night = params.get('price_per_night', ['0'])[0]
-    max_guests = params.get('max_guests', ['1'])[0]
-    bedrooms = params.get('bedrooms', ['0'])[0]
-    bathrooms = params.get('bathrooms', ['0'])[0]
-    amenities_list = params.get('amenities', [])
-    extra_guest_charge_raw = params.get('extra_guest_charge', [None])[0]
+    """به‌روزرسانی اقامتگاه — شامل فیلد extra_guest_charge که میزبان/ادمین می‌تواند تنظیم کند.
+
+    این هندلر همچنین تصاویر جدید آپلودی را (در فیلد "images") دریافت و
+    به اقامتگاه اضافه می‌کند (تا سقف MAX_PROPERTY_IMAGES).
+    """
+    def get_text(key, default=''):
+        v = params.get(key)
+        if not v:
+            return default
+        val = v[0]
+        if isinstance(val, dict):
+            return default
+        if val is None:
+            return default
+        return val.strip() if hasattr(val, 'strip') else str(val)
+
+    title = get_text('title')
+    description = get_text('description')
+    property_type = get_text('property_type')
+    location = get_text('location')
+    price_per_night = get_text('price_per_night', '0') or '0'
+    max_guests = get_text('max_guests', '1') or '1'
+    bedrooms = get_text('bedrooms', '0') or '0'
+    bathrooms = get_text('bathrooms', '0') or '0'
+    amenities_list = [v for v in params.get('amenities', []) if isinstance(v, str)]
+    extra_guest_charge_raw = get_text('extra_guest_charge', None)
+    image_files = params.get('images', [])  # لیست فایل‌های آپلودی جدید
 
     if not all([title, property_type, location, price_per_night, max_guests]):
         return Response.html(400, "فیلدهای الزامی را پر کنید.")
@@ -824,12 +1002,12 @@ def handle_edit_property(params, property_id):
         amenities = ",".join(amenities_list) if amenities_list else None
         # اعتبارسنجی extra_guest_charge
         egc = None
-        if extra_guest_charge_raw not in (None, '', []):
+        if extra_guest_charge_raw is not None and extra_guest_charge_raw != '':
             try:
                 egc = float(extra_guest_charge_raw)
                 if egc < 0:
                     return Response.html(400, "هزینه‌ی مهمان اضافی نمی‌تواند منفی باشد.")
-            except ValueError:
+            except (ValueError, TypeError):
                 return Response.html(400, "فرمت هزینه‌ی مهمان اضافی نامعتبر است.")
 
         models.update_property(
@@ -839,6 +1017,25 @@ def handle_edit_property(params, property_id):
             amenities=amenities,
             extra_guest_charge=egc
         )
+
+        # افزودن تصاویر جدید (تا سقف MAX_PROPERTY_IMAGES)
+        if image_files:
+            current_count = models.count_property_images(property_id)
+            for f in image_files:
+                if current_count >= models.MAX_PROPERTY_IMAGES:
+                    break
+                if not isinstance(f, dict) or not f.get('filename'):
+                    continue
+                if not f.get('data'):
+                    continue
+                if not _allowed_image_filename(f.get('filename')):
+                    continue
+                if len(f['data']) > MAX_IMAGE_SIZE:
+                    continue
+                saved_path = _save_uploaded_image(f, property_id)
+                if saved_path and models.add_property_image(property_id, saved_path):
+                    current_count += 1
+
         return Response.redirect("/admin/properties")
     except Exception as e:
         return Response.html(500, generate_error_page(500, str(e)))
@@ -975,6 +1172,40 @@ def handle_add_comment(params, user_id):
         return Response.redirect(f"/property/{property_id}")
     except ValueError:
         return Response.html(400, "امتیاز نامعتبر است")
+
+
+def handle_delete_property_image(property_id, image_id, user_id):
+    """حذف یک تصویر از اقامتگاه.
+
+    فقط ادمین یا میزبان مالک اقامتگاه می‌تواند این کار را انجام دهد.
+    فایل فیزیکی روی دیسک هم حذف می‌شود.
+    """
+    if not property_id or not image_id:
+        return Response.html(400, generate_error_page(400, "شناسه نامعتبر", user_id))
+
+    # بررسی مالکیت یا ادمین بودن
+    is_admin = _require_admin(user_id)
+    if not is_admin:
+        # اگر ادمین نیست، باید میزبان مالک باشد
+        prop = models.get_property(property_id)
+        if not prop or prop.get("host_id") != user_id:
+            return Response.forbidden(user_id)
+
+    # بررسی اینکه تصویر واقعاً متعلق به این اقامتگاه است
+    img = models.get_image_by_id(image_id)
+    if not img or img.get("property_id") != property_id:
+        return Response.html(404, generate_error_page(404, "تصویر یافت نشد", user_id))
+
+    # حذف از دیتابیس (مسیر فایل برمی‌گردد)
+    file_path = models.delete_property_image(image_id)
+    # حذف فایل فیزیکی
+    if file_path:
+        _delete_image_file(file_path)
+
+    # ریدایرکت به صفحه‌ی ویرایش اقامتگاه (ادمین) یا جزئیات
+    if is_admin:
+        return Response.redirect(f"/admin/properties/{property_id}/edit")
+    return Response.redirect(f"/property/{property_id}")
 
 
 # ======================== error helpers ========================

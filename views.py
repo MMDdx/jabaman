@@ -72,6 +72,14 @@ def _base_context(user_id):
 # ========================
 
 def generate_home_html(featured_properties, user_id=None):
+    # گرفتن تصویر شاخص برای همه‌ی اقامتگاه‌ها در یک کوئری
+    pids = [p["id"] for p in featured_properties if p.get("id")]
+    featured_imgs = {}
+    try:
+        featured_imgs = models.get_featured_images_for_properties(pids)
+    except Exception:
+        pass
+
     props = []
     for p in featured_properties:
         props.append({
@@ -79,7 +87,8 @@ def generate_home_html(featured_properties, user_id=None):
             "title": p["title"],
             "location": p["location"],
             "price_per_night": _fmt_price(p["price_per_night"]),
-            "type_icon": ICON_MAP.get(p.get("property_type"), "🏠")
+            "type_icon": ICON_MAP.get(p.get("property_type"), "🏠"),
+            "image_url": featured_imgs.get(p["id"], "")
         })
     ctx = _base_context(user_id)
     ctx["properties"] = props
@@ -87,6 +96,14 @@ def generate_home_html(featured_properties, user_id=None):
 
 
 def generate_catalog_html(title, properties, user_id=None):
+    # گرفتن تصویر شاخص برای همه‌ی اقامتگاه‌ها در یک کوئری
+    pids = [p["id"] for p in properties if p.get("id")]
+    featured_imgs = {}
+    try:
+        featured_imgs = models.get_featured_images_for_properties(pids)
+    except Exception:
+        pass
+
     props = []
     for p in properties:
         desc = p.get("description") or ""
@@ -99,7 +116,8 @@ def generate_catalog_html(title, properties, user_id=None):
             "bedrooms": p.get("bedrooms") or 0,
             "bathrooms": p.get("bathrooms") or 0,
             "short_desc": (desc[:100] + "...") if len(desc) > 100 else desc,
-            "type_icon": ICON_MAP.get(p.get("property_type"), "🏠")
+            "type_icon": ICON_MAP.get(p.get("property_type"), "🏠"),
+            "image_url": featured_imgs.get(p["id"], "")
         })
     ctx = _base_context(user_id)
     ctx["title"] = title
@@ -142,6 +160,12 @@ def generate_property_detail(prop, comments, user_id=None):
         upcoming_reservations = models.get_reservations_for_property(prop.get("id"))
     except Exception:
         pass
+    # گرفتن لیست تصاویر اقامتگاه (تا ۳ تصویر)
+    property_images = []
+    try:
+        property_images = models.get_property_images(prop.get("id"))
+    except Exception:
+        pass
     # نرمال‌سازی comments
     norm_comments = []
     for c in comments:
@@ -154,6 +178,8 @@ def generate_property_detail(prop, comments, user_id=None):
     ctx["comments_count"] = len(norm_comments)
     ctx["upcoming_reservations"] = upcoming_reservations
     ctx["upcoming_reservations_count"] = len(upcoming_reservations)
+    ctx["property_images"] = property_images
+    ctx["property_images_count"] = len(property_images)
     # مقدار عددی extra_guest_charge برای استفاده در JavaScript (پیش‌نمایش قیمت)
     ctx["extra_guest_charge"] = egc
     ctx["extra_guest_charge_fmt"] = _fmt_price(egc)
@@ -332,7 +358,12 @@ def generate_reservations_page(reservations, user_id=None):
 def generate_wishlist_page(wishlist_items, user_id=None):
     items = []
     for item in wishlist_items:
-        img = _get_first_image(item.get("images"))
+        # استفاده از جدول جدید property_images برای گرفتن تصویر شاخص
+        img = ""
+        try:
+            img = models.get_featured_image(item["id"])
+        except Exception:
+            pass
         items.append({
             "wishlist_id": item.get("wishlist_id"),
             "id": item["id"],
@@ -396,8 +427,19 @@ def generate_edit_user_form(user, user_id=None):
 def generate_edit_property_form(property_data, user_id=None):
     if hasattr(property_data, "keys"):
         property_data = dict(property_data)
+    # گرفتن لیست تصاویر فعلی این اقامتگاه
+    images = []
+    try:
+        images = models.get_property_images(property_data.get("id"))
+    except Exception:
+        pass
     ctx = _base_context(user_id)
     ctx["property"] = property_data
+    ctx["property_images"] = images
+    ctx["property_images_count"] = len(images)
+    ctx["max_images"] = models.MAX_PROPERTY_IMAGES
+    ctx["can_add_more_images"] = len(images) < models.MAX_PROPERTY_IMAGES
+    ctx["remaining_image_slots"] = max(0, models.MAX_PROPERTY_IMAGES - len(images))
     return render_template("edit_property.html", ctx)
 
 

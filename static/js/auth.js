@@ -140,22 +140,47 @@
 
             // ۲) جمع‌آوری داده‌ها
             var formData = new FormData(form);
-            var params = formDataToURLSearchParams(formData);
+
+            // اگر فرم شامل فایل آپلودی است، FormData را مستقیم (multipart) بفرست
+            // تا فایل‌ها هم همراهش ارسال شوند. در غیر این صورت URL-encoded.
+            var hasFile = form.querySelector("input[type='file']") !== null;
+            var body, contentType;
+            if (hasFile) {
+                body = formData;
+                contentType = undefined; // مرورگر خودش boundary تنظیم می‌کند
+            } else {
+                body = formDataToURLSearchParams(formData);
+                contentType = "application/x-www-form-urlencoded";
+            }
 
             // ۳) ارسال با fetch
             setLoading(form, true, loadingText);
 
-            fetch(action, {
+            var fetchOpts = {
                 method: "POST",
-                body: params,
+                body: body,
                 headers: {
                     "Accept": "application/json",
                     "X-Requested-With": "XMLHttpRequest"
                 },
                 credentials: "same-origin"
-            })
+            };
+            // فقط اگر content-type مشخص بود، ست کن (برای multipart مرورگر خودش می‌سازد)
+            if (contentType) {
+                fetchOpts.headers["Content-Type"] = contentType;
+            }
+
+            fetch(action, fetchOpts)
             .then(function (resp) {
-                // حتی در پاسخ‌های 4xx/5xx هم JSON برمی‌گردد
+                // اگر پاسخ JSON نبود (مثلاً redirect HTML)، متن معمولی برمی‌گردد
+                var ct = resp.headers.get("Content-Type") || "";
+                if (ct.indexOf("application/json") === -1) {
+                    // پاسخ غیر JSON — احتمالاً یک صفحه HTML (مثل redirect).
+                    // در این حالت از successRedirect یا location استفاده می‌کنیم.
+                    return resp.text().then(function () {
+                        return { status: resp.status, data: { success: resp.ok, redirect: successRedirect } };
+                    });
+                }
                 return resp.json().then(function (data) {
                     return { status: resp.status, data: data };
                 });

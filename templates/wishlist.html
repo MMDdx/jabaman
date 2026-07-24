@@ -45,9 +45,11 @@
         <div class="property-card">
             <div class="card-image">
                 {% if item.image_url %}
-                <img src="{{ item.image_url }}" alt="{{ item.title }}">
+                <img src="{{ item.image_url }}" alt="{{ item.title }}" class="card-image-img" loading="lazy">
                 {% else %}
-                <span class="card-type-icon">🏠</span>
+                <div class="card-image-placeholder">
+                    <span class="card-type-icon">🏠</span>
+                </div>
                 {% endif %}
             </div>
             <div class="card-body">

@@ -57,6 +57,7 @@
         <form class="listing-form"
               action="/add-property"
               method="POST"
+              enctype="multipart/form-data"
               data-ajax-form
               data-loading-text="در حال ثبت..."
               data-success-message="اقامتگاه با موفقیت ثبت شد."
@@ -172,6 +173,40 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label for="property-images">
+                    تصاویر اقامتگاه
+                    <span class="image-counter-badge" style="background:var(--primary);color:#fff;font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:999px;margin-right:0.5rem;">
+                        ۰ از ۳
+                    </span>
+                    <i class="fas fa-info-circle" style="color:var(--text-muted);cursor:help;"
+                       title="حداکثر ۳ تصویر می‌توانید آپلود کنید. فرمت‌های مجاز: JPG، PNG، WEBP، GIF. حداکثر اندازه هر فایل: ۵ مگابایت."></i>
+                </label>
+
+                <!-- Drop Zone برای انتخاب تصاویر -->
+                <div class="image-dropzone" id="image-dropzone">
+                    <input type="file" id="property-images" name="images" class="image-input"
+                           accept="image/jpeg,image/png,image/webp,image/gif" multiple
+                           data-max="3" data-preview-target="image-preview-list" hidden>
+                    <div class="dropzone-inner">
+                        <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
+                        <p class="dropzone-title">برای آپلود تصاویر اقامتگاه اینجا کلیک کنید یا فایل‌ها را بکشید و رها کنید</p>
+                        <p class="dropzone-hint">
+                            <i class="fas fa-camera"></i>
+                            تا ۳ تصویر (اختیاری) — تصویر اول به‌عنوان تصویر شاخص نمایش داده می‌شود
+                        </p>
+                        <button type="button" class="btn-outline btn-sm dropzone-btn">
+                            <i class="fas fa-image"></i> انتخاب تصاویر
+                        </button>
+                        <p class="dropzone-formats">
+                            فرمت‌های مجاز: JPG، PNG، WEBP، GIF — حداکثر اندازه هر فایل: ۵MB
+                        </p>
+                    </div>
+                </div>
+
+                <div id="image-preview-list" class="image-preview-list"></div>
+            </div>
+
             <button type="submit" class="submit-btn">
                 <span>درج اقامتگاه</span>
                 <i class="fas fa-chevron-left"></i>
@@ -187,5 +222,6 @@
 
 <script src="/static/js/auth.js"></script>
 <script src="/static/js/main.js"></script>
+<script src="/static/js/image-upload.js"></script>
 </body>
 </html>

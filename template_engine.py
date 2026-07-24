@@ -57,6 +57,7 @@ def _resolve_expr(expr, context):
     - ایندکس عددی: {{ items.0 }}
     - فیلتر safe: {{ var|safe }} (در replace_variables هندل می‌شود)
     - دسترسی با براکت: {{ obj[key] }} یا {{ obj["key"] }} (پویا)
+    - ترکیب براکت و نقطه: {{ obj[0].attr }} یا {{ obj["key"].attr }}
     """
     expr = expr.strip()
 
@@ -74,50 +75,80 @@ def _resolve_expr(expr, context):
         # فیلترهای دیگر (از جمله safe که در replace_variables هندل می‌شود)
         return str(val) if val is not None else ""
 
-    # دسترسی با براکت: obj[key] یا obj["key"] یا obj['key']
-    # (باید آخرین شاخص باشد، نه در میان expr)
-    bracket_match = re.match(r'^(\w+)\s*\[\s*(.+?)\s*\]$', expr)
-    if bracket_match:
-        obj_name = bracket_match.group(1)
-        key_expr = bracket_match.group(2)
-        obj = context.get(obj_name)
-        # حل مقدار کلید
-        if (key_expr.startswith('"') and key_expr.endswith('"')) or \
-           (key_expr.startswith("'") and key_expr.endswith("'")):
-            key = key_expr[1:-1]
-        else:
-            key = _resolve_expr(key_expr, context)
-        if obj is None:
-            return ""
-        if isinstance(obj, Mapping):
-            return obj.get(key, "") or ""
-        if hasattr(obj, "keys"):
-            try:
-                return obj[key] or ""
-            except (KeyError, IndexError):
-                return ""
-        return ""
+    # اگر expr فقط یک نام متغیر ساده است
+    if re.match(r'^\w+$', expr):
+        val = context.get(expr, "")
+        return val if val is not None else ""
 
-    # دسترسی با نقطه
-    if "." in expr:
-        parts = expr.split(".")
-        obj = context.get(parts[0])
-        for part in parts[1:]:
+    # حالت ترکیبی: یک نام متغیر + دنباله‌ای از [key] یا .attr
+    # مثال‌ها: obj.attr, obj[0], obj["key"], obj[0].attr, obj.attr[1].name
+    # ابتدا نام متغیر را تشخیص می‌دهیم
+    m = re.match(r'^(\w+)(.*)$', expr, re.DOTALL)
+    if not m:
+        return ""
+    obj_name = m.group(1)
+    rest = m.group(2)
+    obj = context.get(obj_name)
+
+    # حالا rest را کاراکتر به کاراکتر (با regex) تجزیه می‌کنیم
+    # هر گام یکی از این‌هاست: .name یا [expr] یا .0 (ایندکس عددی)
+    accessor_re = re.compile(r'\.\s*(\w+)|\[\s*([^\]]+?)\s*\]', re.DOTALL)
+    pos = 0
+    while pos < len(rest):
+        # چرخاندن فضاهای خالی ابتدایی
+        while pos < len(rest) and rest[pos].isspace():
+            pos += 1
+        if pos >= len(rest):
+            break
+        m_acc = accessor_re.match(rest, pos)
+        if not m_acc:
+            # بخش غیرقابل تجزیه — خروج
+            return ""
+        pos = m_acc.end()
+        if m_acc.group(1) is not None:
+            # .name (شامل .0 ایندکس عددی هم می‌شود)
+            key = m_acc.group(1)
             if obj is None or obj == "":
                 return ""
-            # ایندکس عددی
-            if part.isdigit() and isinstance(obj, (list, tuple)):
+            if key.isdigit() and isinstance(obj, (list, tuple)):
                 try:
-                    obj = obj[int(part)]
+                    obj = obj[int(key)]
                 except IndexError:
                     return ""
             else:
-                obj = _get_value(obj, part)
-        return obj
-
-    # متغیر ساده
-    val = context.get(expr, "")
-    return val if val is not None else ""
+                obj = _get_value(obj, key)
+        else:
+            # [expr]
+            key_expr = m_acc.group(2).strip()
+            if obj is None or obj == "":
+                return ""
+            # حل مقدار کلید
+            if (key_expr.startswith('"') and key_expr.endswith('"')) or \
+               (key_expr.startswith("'") and key_expr.endswith("'")):
+                key = key_expr[1:-1]
+            elif key_expr.lstrip('-').isdigit():
+                key = int(key_expr)
+            else:
+                key = _resolve_expr(key_expr, context)
+            # اعمال key
+            if isinstance(obj, (list, tuple)):
+                if isinstance(key, int):
+                    try:
+                        obj = obj[key]
+                    except IndexError:
+                        return ""
+                else:
+                    return ""
+            elif isinstance(obj, Mapping):
+                obj = obj.get(key, "") or ""
+            elif hasattr(obj, "keys"):
+                try:
+                    obj = obj[key] or ""
+                except (KeyError, IndexError):
+                    return ""
+            else:
+                obj = getattr(obj, str(key), "") or ""
+    return obj if obj is not None else ""
 
 
 def _escape(value):
@@ -156,6 +187,8 @@ def _eval_condition(cond, context):
     - {% if var == 'value' %} → مقایسه با رشته
     - {% if var != 'value' %}
     - {% if var == 5 %}       → مقایسه با عدد
+    - {% if var > 5 %}        → مقایسه‌ی عددی (>=, <=, >, <)
+    - {% if var == other_var %} → مقایسه‌ی دو متغیر
     """
     cond = cond.strip()
 
@@ -165,24 +198,47 @@ def _eval_condition(cond, context):
         val = _resolve_expr(m.group(1), context)
         return not val
 
-    # var == value  یا  var != value
-    m = re.match(r'^(\w+(?:\.\w+)*)\s*(==|!=)\s*(.+)$', cond)
+    # var OP value  (OP = ==, !=, >=, <=, >, <)
+    # نکته: expr ممکن است شامل براکت هم باشد (مثل obj[0].id) پس فقط \w+ نیست.
+    m = re.match(r'^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$', cond)
     if m:
-        left = _resolve_expr(m.group(1), context)
+        left = _resolve_expr(m.group(1).strip(), context)
         op = m.group(2)
         right_raw = m.group(3).strip()
-        # پارس کردن right (رشته با کوتیشن یا عدد)
+        # پارس کردن right (رشته با کوتیشن یا عدد یا expr)
         if (right_raw.startswith("'") and right_raw.endswith("'")) or \
            (right_raw.startswith('"') and right_raw.endswith('"')):
             right = right_raw[1:-1]
         elif right_raw.lstrip('-').isdigit():
             right = int(right_raw)
+        elif right_raw.lstrip('-').replace('.', '', 1).isdigit():
+            right = float(right_raw)
         else:
             right = _resolve_expr(right_raw, context)
+
+        # برای == و !=، مقایسه‌ی رشته‌ای
         if op == "==":
             return str(left) == str(right)
-        else:
+        if op == "!=":
             return str(left) != str(right)
+
+        # برای >, <, >=, <=، مقایسه‌ی عددی
+        try:
+            left_num = float(left) if not isinstance(left, bool) else (1 if left else 0)
+            right_num = float(right) if not isinstance(right, bool) else (1 if right else 0)
+        except (ValueError, TypeError):
+            # اگر عددی نیست، مقایسه‌ی رشته‌ای
+            left_num = str(left)
+            right_num = str(right)
+
+        if op == ">":
+            return left_num > right_num
+        if op == "<":
+            return left_num < right_num
+        if op == ">=":
+            return left_num >= right_num
+        if op == "<=":
+            return left_num <= right_num
 
     # حالت ساده: فقط متغیر (truthy check)
     val = _resolve_expr(cond, context)

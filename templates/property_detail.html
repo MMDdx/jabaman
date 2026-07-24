@@ -49,6 +49,49 @@
             <p class="detail-location"><i class="fas fa-map-marker-alt"></i> {{ property.location }}</p>
         </div>
     </div>
+
+    <!-- ========== گالری تصاویر ========== -->
+    {% if property_images %}
+    <div class="property-gallery">
+        <div class="gallery-main">
+            <img id="gallery-main-img"
+                 src="{{ property_images[0].image_path }}"
+                 alt="{{ property.title }}"
+                 class="gallery-main-img">
+            {% if property_images_count > 1 %}
+            <button type="button" class="gallery-nav gallery-nav-prev" aria-label="تصویر قبلی" onclick="galleryNavigate(-1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button type="button" class="gallery-nav gallery-nav-next" aria-label="تصویر بعدی" onclick="galleryNavigate(1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="gallery-counter">
+                <span id="gallery-current">۱</span> / {{ property_images_count }}
+            </span>
+            {% endif %}
+        </div>
+        {% if property_images_count > 1 %}
+        <div class="gallery-thumbs">
+            {% for img in property_images %}
+            <button type="button"
+                    class="gallery-thumb {% if loop.index == 1 %}active{% endif %}"
+                    data-index="{{ loop.index0 }}"
+                    onclick="gallerySelect({{ loop.index0 }})">
+                <img src="{{ img.image_path }}" alt="تصویر {{ loop.index }}" loading="lazy">
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="property-gallery property-gallery-empty">
+        <div class="gallery-placeholder">
+            <i class="fas fa-image"></i>
+            <p>تصویری برای این اقامتگاه ثبت نشده است</p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="detail-info">
         <div class="info-box"><i class="fas fa-bed"></i> {{ property.bedrooms }} خواب</div>
         <div class="info-box"><i class="fas fa-bath"></i> {{ property.bathrooms }} سرویس</div>
@@ -201,6 +244,52 @@
 </footer>
 
 <script src="/static/js/main.js"></script>
+<script>
+// ========== گالری تصاویر ==========
+(function() {
+    var images = [
+        {% for img in property_images %}
+        "{{ img.image_path }}",
+        {% endfor %}
+    ];
+    var currentIndex = 0;
+    var mainImg = document.getElementById('gallery-main-img');
+    var currentLabel = document.getElementById('gallery-current');
+    var thumbs = document.querySelectorAll('.gallery-thumb');
+    var toFa = function(n) {
+        var fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        return String(n).split('').map(function(d){return fa[+d]||d;}).join('');
+    };
+
+    window.gallerySelect = function(idx) {
+        if (idx < 0 || idx >= images.length) return;
+        currentIndex = idx;
+        if (mainImg) mainImg.src = images[idx];
+        if (currentLabel) currentLabel.textContent = toFa(idx + 1);
+        thumbs.forEach(function(t, i) {
+            if (i === idx) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+    };
+
+    window.galleryNavigate = function(delta) {
+        var next = currentIndex + delta;
+        if (next < 0) next = images.length - 1;
+        if (next >= images.length) next = 0;
+        gallerySelect(next);
+    };
+
+    // ناوبری با کیبورد
+    document.addEventListener('keydown', function(e) {
+        if (!images.length) return;
+        // فقط وقتی focus روی input/textarea نیست
+        var tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        if (e.key === 'ArrowLeft') galleryNavigate(1);   // در RTL: چپ → بعدی
+        if (e.key === 'ArrowRight') galleryNavigate(-1); // در RTL: راست → قبلی
+    });
+})();
+</script>
 <script>
 (function() {
     var checkIn = document.getElementById('check_in_date');

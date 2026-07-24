@@ -119,6 +119,15 @@ EXPECTED_SCHEMA = {
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "FOREIGN KEY (user_id)": "REFERENCES users(id) ON DELETE CASCADE",
         "FOREIGN KEY (property_id)": "REFERENCES properties(id) ON DELETE CASCADE"
+    },
+    "property_images": {
+        "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "property_id": "INTEGER NOT NULL",
+        "image_path": "TEXT NOT NULL",
+        "caption": "TEXT",
+        "sort_order": "INTEGER DEFAULT 0",
+        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "FOREIGN KEY (property_id)": "REFERENCES properties(id) ON DELETE CASCADE"
     }
 }
 
@@ -236,7 +245,18 @@ def create_tables(conn):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
-        )"""
+        )""",
+        """CREATE TABLE IF NOT EXISTS property_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            caption TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        )""",
+        """CREATE INDEX IF NOT EXISTS idx_property_images_property_id
+           ON property_images(property_id)"""
     ]
     try:
         cursor = conn.cursor()

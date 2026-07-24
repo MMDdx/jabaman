@@ -44,7 +44,13 @@
             {% for prop in properties %}
             <div class="property-card">
                 <div class="card-image">
-                    <span class="card-type-icon">{{ prop.type_icon }}</span>
+                    {% if prop.image_url %}
+                    <img src="{{ prop.image_url }}" alt="{{ prop.title }}" class="card-image-img" loading="lazy">
+                    {% else %}
+                    <div class="card-image-placeholder">
+                        <span class="card-type-icon">{{ prop.type_icon }}</span>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <h3>{{ prop.title }}</h3>
