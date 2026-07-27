@@ -1,8 +1,12 @@
 /* ============================================================
-   auth.js — اسکریپت مشترک برای فرم‌های ورود و ثبت‌نام
+   auth.js — اسکریپت مشترک برای فرم‌های AJAX (ورود، ثبت‌نام، تماس، ...)
    ============================================================
-   این فایل به‌صورت خودکار فرم‌هایی که ویژگی `data-ajax-form` دارند
+   این ماژول به‌صورت خودکار فرم‌هایی که ویژگی `data-ajax-form` دارند
    را پیدا کرده و ارسال آن‌ها را با fetch مدیریت می‌کند.
+
+   این ماژول خودش را در `window.JabamanModules` ثبت می‌کند تا
+   `main.js` آن را init کند. به همین دلیل در صفحاتی که این فایل
+   بارگذاری می‌شود، باید main.js هم بارگذاری شود.
 
    نحوه استفاده در HTML:
    ------------------------------------------------------------
@@ -214,22 +218,24 @@
     }
 
     /** وقتی DOM آماده شد، همه فرم‌های `data-ajax-form` را attach کن. */
-    function init() {
-        var forms = document.querySelectorAll("form[data-ajax-form]");
+    function init(root) {
+        root = root || document;
+        var forms = root.querySelectorAll("form[data-ajax-form]");
         for (var i = 0; i < forms.length; i++) {
+            // جلوگیری از attach چندباره
+            if (forms[i].__authFormAttached) continue;
+            forms[i].__authFormAttached = true;
             attachHandler(forms[i]);
         }
     }
 
-    // اجرای init بعد از لود شدن DOM
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
-    }
+    // ثبت در module registry (main.js اجرای init را برعهده دارد)
+    window.JabamanModules = window.JabamanModules || [];
+    window.JabamanModules.push({ name: "AuthForm", init: init });
 
     // API عمومی (در صورت نیاز به استفاده دستی)
     window.AuthForm = {
+        init: init,
         showMessage: showMessage,
         hideMessage: hideMessage,
         validateForm: validateForm

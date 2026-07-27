@@ -1,10 +1,18 @@
 /* ============================================================
    logout.js — پاک‌کردن کوکی نشست و ریدایرکت به صفحه اصلی
    ============================================================
-   این فایل فقط در صفحه‌ی /logout بارگذاری می‌شود.
+   این ماژول فقط در صفحه‌ی /logout فعال می‌شود (با وجود data-logout-page
+   یا خود وجود کوکی session_id تشخیص داده نمی‌شود — فقط یک عنصر با
+   attribute `data-logout-trigger` را فعال می‌کند).
+
+   برای backward-compat: اگر صفحه شامل عنصری با id="logout-page" یا
+   کلاس "logout-page" باشد، تابع فعال می‌شود.
+
    کار آن:
      1) پاک‌کردن کوکی session_id در سمت کلاینت (اضافه بر Set-Cookie سرور)
      2) ریدایرکت کاربر به صفحه اصلی (/) پس از یک مکث کوتاه
+
+   نکته: این ماژول خودش را در `window.JabamanModules` ثبت می‌کند.
    ============================================================ */
 
 (function () {
@@ -25,15 +33,22 @@
         }, 800);
     }
 
-    // اجرای مراحل پس از لود شدن DOM
-    function init() {
+    function init(root) {
+        root = root || document;
+        // فقط در صفحه‌ی /logout فعال می‌شود
+        var trigger = root.querySelector("[data-logout-trigger], #logout-page, .logout-page");
+        if (!trigger) return;
+        // جلوگیری از اجرای دوباره
+        if (window.__logoutDone) return;
+        window.__logoutDone = true;
         clearSessionCookie();
         redirectToHome();
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
-    }
+    // ثبت در module registry
+    window.JabamanModules = window.JabamanModules || [];
+    window.JabamanModules.push({ name: "LogoutRedirect", init: init });
+
+    // API عمومی
+    window.LogoutRedirect = { init: init };
 })();

@@ -1,40 +1,62 @@
 /* ============================================================
-   main.js — اسکریپت عمومی سایت جابامن
+   main.js — Bootstrap مرکزی پروژه‌ی جابامن
    ============================================================
-   این فایل در همه‌ی صفحات بارگذاری می‌شود و شامل:
-     1) مدیریت خطای بارگذاری تصاویر (به‌جای onerror در HTML)
-     2) هایلایت لینک فعال در نوار ناوبری
-     3) بستن منوی موبایل با کلیک خارج از منو (در صورت وجود)
+   این فایل در همه‌ی صفحات بارگذاری می‌شود و نقش «dispatch» دارد.
+
+   ----- معماری Module Registry -----
+   هر فایل JS (مثل auth.js, image-upload.js, property_gallery.js, ...)
+   خودش را در `window.JabamanModules` ثبت می‌کند:
+
+       window.JabamanModules.push({
+           name: "ModuleName",
+           init: function (root) { ... }
+       });
+
+   main.js پس از لود شدن DOM، همه‌ی ماژول‌های ثبت‌شده را به‌ترتیب init
+   می‌کند. هر ماژول با querySelector تشخیص می‌دهد که آیا المان مورد
+   نیازش روی این صفحه هست یا نه. اگر نبود، یک noop است.
+
+   ----- مزایا -----
+   ۱. هر صفحه فقط `<script src="/static/js/main.js">` را شامل می‌شود
+      (به‌علاوه‌ی فایل‌های feature-specific که لازم دارند).
+   ۲. اضافه‌کردن feature جدید = ساخت فایل JS + import در template +
+      ثبت در registry. نیازی به ویرایش main.js نیست.
+   ۳. re-init پس از AJAX: می‌توان `window.JabamanInit()` را صدا زد
+      تا ماژول‌ها روی DOM جدید هم اجرا شوند.
    ============================================================ */
 
 (function () {
     "use strict";
 
-    /* ---------- ۱) مدیریت خطای بارگذاری تصاویر ----------
-       هر تگ <img> که کلاس logo-img یا کلاس fallback-hide داشته باشد،
-       در صورت شکست بارگذاری مخفی می‌شود.
-       این کار به‌جای استفاده از onerror="this.style.display='none'" در HTML است.
-    */
-    function setupImageFallback() {
-        var imgs = document.querySelectorAll("img.logo-img, img.fallback-hide");
+    // ----- ماژول‌های داخلی main.js -----
+    // این‌ها کارهای سراسری هستند که همیشه لازم‌اند و در همین فایل تعریف می‌شوند.
+
+    /**
+     * مدیریت خطای بارگذاری تصاویر.
+     * هر <img> با کلاس logo-img یا fallback-hide در صورت شکست بارگذاری مخفی می‌شود.
+     * جایگزین onerror="this.style.display='none'" در HTML.
+     */
+    function setupImageFallback(root) {
+        var imgs = root.querySelectorAll("img.logo-img, img.fallback-hide");
         imgs.forEach(function (img) {
+            // جلوگیری از attach چندباره
+            if (img.__fallbackAttached) return;
+            img.__fallbackAttached = true;
             img.addEventListener("error", function () {
                 img.style.display = "none";
             });
         });
     }
 
-    /* ---------- ۲) هایلایت لینک فعال در ناوبری ----------
-       لینکی که href آن با مسیر فعلی همخوانی داشته باشد،
-       کلاس active می‌گیرد.
-    */
-    function highlightActiveNav() {
+    /**
+     * هایلایت لینک فعال در نوار ناوبری.
+     */
+    function highlightActiveNav(root) {
         var currentPath = window.location.pathname;
-        var navLinks = document.querySelectorAll(".main-nav a, .footer-col a");
+        var navLinks = root.querySelectorAll(".main-nav a, .footer-col a");
         navLinks.forEach(function (link) {
             var href = link.getAttribute("href");
             if (!href || href === "#") return;
-            // حذف اسلッシュ انتهایی برای مقایسه
             var normalizedHref = href.replace(/\/$/, "");
             var normalizedPath = currentPath.replace(/\/$/, "");
             if (normalizedHref === normalizedPath) {
@@ -43,12 +65,14 @@
         });
     }
 
-    /* ---------- ۳) فعال‌سازی tooltip ساده برای عناصر با data-tooltip ----------
-       (در صورت استفاده در آینده)
-    */
-    function setupTooltips() {
-        var tooltipEls = document.querySelectorAll("[data-tooltip]");
+    /**
+     * فعال‌سازی tooltip ساده برای عناصر با data-tooltip.
+     */
+    function setupTooltips(root) {
+        var tooltipEls = root.querySelectorAll("[data-tooltip]");
         tooltipEls.forEach(function (el) {
+            if (el.__tooltipAttached) return;
+            el.__tooltipAttached = true;
             el.addEventListener("mouseenter", function () {
                 var text = el.getAttribute("data-tooltip");
                 if (!text) return;
@@ -72,22 +96,39 @@
         });
     }
 
-    /* ---------- اجرای همه‌ی تنظیمات ---------- */
-    function init() {
-        setupImageFallback();
-        highlightActiveNav();
-        setupTooltips();
+    // register internal modules
+    window.JabamanModules = window.JabamanModules || [];
+    window.JabamanModules.push({ name: "ImageFallback", init: setupImageFallback });
+    window.JabamanModules.push({ name: "ActiveNav",     init: highlightActiveNav });
+    window.JabamanModules.push({ name: "Tooltips",      init: setupTooltips });
+
+    // ----- bootstrap -----
+    /**
+     * init همه‌ی ماژول‌های ثبت‌شده در registry.
+     * پارامتر `root` به‌صورت پیش‌فرض document است؛ می‌توان برای re-init
+     * روی یک زیر-درخت DOM (مثلاً پس از AJAX) آن را به یک element داد.
+     */
+    function initAll(root) {
+        root = root || document;
+        var modules = window.JabamanModules || [];
+        for (var i = 0; i < modules.length; i++) {
+            try {
+                if (typeof modules[i].init === "function") {
+                    modules[i].init(root);
+                }
+            } catch (err) {
+                console.error("[Jabaman] module init failed:", modules[i].name, err);
+            }
+        }
     }
 
+    // اجرای initAll پس از آماده‌شدن DOM
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", function () { initAll(document); });
     } else {
-        init();
+        initAll(document);
     }
 
-    // API عمومی (در صورت نیاز به استفاده دستی)
-    window.JabamanMain = {
-        setupImageFallback: setupImageFallback,
-        highlightActiveNav: highlightActiveNav
-    };
+    // API عمومی برای re-init دستی (مثلاً بعد از AJAX)
+    window.JabamanInit = initAll;
 })();

@@ -52,21 +52,22 @@
 
     <!-- ========== گالری تصاویر ========== -->
     {% if property_images %}
-    <div class="property-gallery">
+    <div class="property-gallery" data-gallery>
         <div class="gallery-main">
             <img id="gallery-main-img"
+                 data-gallery-main
                  src="{{ property_images[0].image_path }}"
                  alt="{{ property.title }}"
                  class="gallery-main-img">
             {% if property_images_count > 1 %}
-            <button type="button" class="gallery-nav gallery-nav-prev" aria-label="تصویر قبلی" onclick="galleryNavigate(-1)">
+            <button type="button" class="gallery-nav gallery-nav-prev" aria-label="تصویر قبلی" data-gallery-prev>
                 <i class="fas fa-chevron-right"></i>
             </button>
-            <button type="button" class="gallery-nav gallery-nav-next" aria-label="تصویر بعدی" onclick="galleryNavigate(1)">
+            <button type="button" class="gallery-nav gallery-nav-next" aria-label="تصویر بعدی" data-gallery-next>
                 <i class="fas fa-chevron-left"></i>
             </button>
             <span class="gallery-counter">
-                <span id="gallery-current">۱</span> / {{ property_images_count }}
+                <span id="gallery-current" data-gallery-current>۱</span> / {{ property_images_count }}
             </span>
             {% endif %}
         </div>
@@ -75,14 +76,20 @@
             {% for img in property_images %}
             <button type="button"
                     class="gallery-thumb {% if loop.index == 1 %}active{% endif %}"
-                    data-index="{{ loop.index0 }}"
-                    onclick="gallerySelect({{ loop.index0 }})">
+                    data-gallery-thumb
+                    data-index="{{ loop.index0 }}">
                 <img src="{{ img.image_path }}" alt="تصویر {{ loop.index }}" loading="lazy">
             </button>
             {% endfor %}
         </div>
         {% endif %}
     </div>
+    <!-- لیست URL تصاویر به‌صورت JSON برای استفاده‌ی ماژول property_gallery.js -->
+    <script type="application/json" data-gallery-images hidden>
+    [
+        {% for img in property_images %}"{{ img.image_path }}"{% if not loop.last %},{% endif %}{% endfor %}
+    ]
+    </script>
     {% else %}
     <div class="property-gallery property-gallery-empty">
         <div class="gallery-placeholder">
@@ -125,7 +132,12 @@
             <i class="fas fa-calendar-plus" style="color:var(--primary);"></i>
             افزودن به سبد خرید
         </h3>
-        <form method="POST" action="/cart/add" id="add-to-cart-form">
+        <form method="POST" action="/cart/add" id="add-to-cart-form"
+              data-reservation-form
+              data-price-per-night="{{ property.price_per_night }}"
+              data-max-guests="{{ property.max_guests }}"
+              data-extra-guest-charge="{{ extra_guest_charge }}"
+              data-reserved-ranges='[{% for r in upcoming_reservations %}{"start":"{{ r.check_in_date }}","end":"{{ r.check_out_date }}"}{% if not loop.last %},{% endif %}{% endfor %}]'>
             <input type="hidden" name="property_id" value="{{ property.id }}">
             <div class="form-row">
                 <div class="form-group">
@@ -145,22 +157,22 @@
                     </small>
                 </div>
             </div>
-            <div id="price-preview" class="price-preview" style="display:none;">
+            <div id="price-preview" class="price-preview" data-price-preview style="display:none;">
                 <div class="price-preview-row">
                     <span>تعداد شب:</span>
-                    <strong id="preview-nights">—</strong>
+                    <strong id="preview-nights" data-preview-nights>—</strong>
                 </div>
                 <div class="price-preview-row">
                     <span>قیمت پایه:</span>
-                    <strong id="preview-base">—</strong>
+                    <strong id="preview-base" data-preview-base>—</strong>
                 </div>
-                <div class="price-preview-row" id="preview-extra-row" style="display:none;">
+                <div class="price-preview-row" id="preview-extra-row" data-preview-extra-row style="display:none;">
                     <span>هزینه‌ی مهمان اضافی:</span>
-                    <strong id="preview-extra">—</strong>
+                    <strong id="preview-extra" data-preview-extra>—</strong>
                 </div>
                 <div class="price-preview-row price-preview-total">
                     <span>مجموع:</span>
-                    <strong id="preview-total">—</strong> تومان
+                    <strong id="preview-total" data-preview-total>—</strong> تومان
                 </div>
             </div>
             <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap;">
@@ -243,163 +255,10 @@
     </div>
 </footer>
 
+<!-- اسکریپت‌های اختصاصی صفحه‌ی جزئیات اقامتگاه -->
+<script src="/static/js/property_gallery.js"></script>
+<script src="/static/js/reservation_form.js"></script>
+<!-- Bootstrap مرکزی — باید آخرین اسکریپت باشد چون ماژول‌های بالا را init می‌کند -->
 <script src="/static/js/main.js"></script>
-<script>
-// ========== گالری تصاویر ==========
-(function() {
-    var images = [
-        {% for img in property_images %}
-        "{{ img.image_path }}",
-        {% endfor %}
-    ];
-    var currentIndex = 0;
-    var mainImg = document.getElementById('gallery-main-img');
-    var currentLabel = document.getElementById('gallery-current');
-    var thumbs = document.querySelectorAll('.gallery-thumb');
-    var toFa = function(n) {
-        var fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-        return String(n).split('').map(function(d){return fa[+d]||d;}).join('');
-    };
-
-    window.gallerySelect = function(idx) {
-        if (idx < 0 || idx >= images.length) return;
-        currentIndex = idx;
-        if (mainImg) mainImg.src = images[idx];
-        if (currentLabel) currentLabel.textContent = toFa(idx + 1);
-        thumbs.forEach(function(t, i) {
-            if (i === idx) t.classList.add('active');
-            else t.classList.remove('active');
-        });
-    };
-
-    window.galleryNavigate = function(delta) {
-        var next = currentIndex + delta;
-        if (next < 0) next = images.length - 1;
-        if (next >= images.length) next = 0;
-        gallerySelect(next);
-    };
-
-    // ناوبری با کیبورد
-    document.addEventListener('keydown', function(e) {
-        if (!images.length) return;
-        // فقط وقتی focus روی input/textarea نیست
-        var tag = (e.target.tagName || '').toLowerCase();
-        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-        if (e.key === 'ArrowLeft') galleryNavigate(1);   // در RTL: چپ → بعدی
-        if (e.key === 'ArrowRight') galleryNavigate(-1); // در RTL: راست → قبلی
-    });
-})();
-</script>
-<script>
-(function() {
-    var checkIn = document.getElementById('check_in_date');
-    var checkOut = document.getElementById('check_out_date');
-    var guests = document.getElementById('guests');
-    var preview = document.getElementById('price-preview');
-    var pricePerNight = parseFloat("{{ property.price_per_night }}") || 0;
-    var maxGuests = parseInt("{{ property.max_guests }}") || 1;
-    // هزینه‌ی مهمان اضافی اختصاصی همین اقامتگاه
-    var extraChargePerGuest = parseFloat("{{ extra_guest_charge }}") || 100000;
-
-    // لیست بازه‌های رزروشده برای بررسی هم‌پوشانی در سمت کلاینت
-    // (ترتیب آخرین کاما در JS مشکلی ایجاد نمی‌کند)
-    var reservedRanges = [
-        {% for r in upcoming_reservations %}
-        { start: "{{ r.check_in_date }}", end: "{{ r.check_out_date }}" },
-        {% endfor %}
-    ];
-
-    function fmt(num) {
-        return num.toLocaleString('fa-IR');
-    }
-
-    function rangesOverlap(aStart, aEnd, bStart, bEnd) {
-        // هم‌پوشانی: A.start < B.end AND B.start < A.end
-        return new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);
-    }
-
-    function findOverlap(checkIn, checkOut) {
-        for (var i = 0; i < reservedRanges.length; i++) {
-            if (rangesOverlap(checkIn, checkOut, reservedRanges[i].start, reservedRanges[i].end)) {
-                return reservedRanges[i];
-            }
-        }
-        return null;
-    }
-
-    function updatePreview() {
-        if (!checkIn.value || !checkOut.value) {
-            preview.style.display = 'none';
-            return;
-        }
-        var d1 = new Date(checkIn.value);
-        var d2 = new Date(checkOut.value);
-        if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 <= d1) {
-            preview.style.display = 'none';
-            return;
-        }
-        var nights = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-        if (nights < 1) nights = 1;
-        var g = parseInt(guests.value) || 1;
-        var base = pricePerNight * nights;
-        var extraGuests = Math.max(0, g - maxGuests);
-        var extraCharge = extraGuests * extraChargePerGuest * nights;
-        var total = base + extraCharge;
-
-        document.getElementById('preview-nights').textContent = fmt(nights) + ' شب';
-        document.getElementById('preview-base').textContent = fmt(base);
-        if (extraGuests > 0) {
-            document.getElementById('preview-extra-row').style.display = 'flex';
-            document.getElementById('preview-extra').textContent = fmt(extraCharge) + ' (' + fmt(extraGuests) + ' نفر اضافی × ' + fmt(nights) + ' شب)';
-        } else {
-            document.getElementById('preview-extra-row').style.display = 'none';
-        }
-        document.getElementById('preview-total').textContent = fmt(total);
-        preview.style.display = 'block';
-    }
-
-    if (checkIn && checkOut && guests) {
-        checkIn.addEventListener('change', updatePreview);
-        checkOut.addEventListener('change', updatePreview);
-        guests.addEventListener('input', updatePreview);
-        // تنظیم حداقل تاریخ ورود به امروز
-        var today = new Date().toISOString().split('T')[0];
-        checkIn.setAttribute('min', today);
-        checkOut.setAttribute('min', today);
-    }
-
-    // اعتبارسنجی قبل از ارسال — شامل بررسی هم‌پوشانی تاریخ‌ها
-    var form = document.getElementById('add-to-cart-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            if (!checkIn.value || !checkOut.value) {
-                e.preventDefault();
-                alert('لطفاً تاریخ ورود و خروج را انتخاب کنید.');
-                return;
-            }
-            var d1 = new Date(checkIn.value);
-            var d2 = new Date(checkOut.value);
-            if (d2 <= d1) {
-                e.preventDefault();
-                alert('تاریخ خروج باید بعد از تاریخ ورود باشد.');
-                return;
-            }
-            var g = parseInt(guests.value) || 0;
-            if (g < 1) {
-                e.preventDefault();
-                alert('تعداد مهمان باید حداقل ۱ باشد.');
-                return;
-            }
-            // بررسی هم‌پوشانی با رزروهای موجود
-            var overlap = findOverlap(checkIn.value, checkOut.value);
-            if (overlap) {
-                e.preventDefault();
-                alert('بازه‌ی انتخابی شما از ' + overlap.start + ' تا ' + overlap.end + ' با رزروی موجود هم‌پوشانی دارد.\nلطفاً بازه‌ی دیگری انتخاب کنید.');
-                return;
-            }
-        });
-    }
-})();
-</script>
 </body>
 </html>

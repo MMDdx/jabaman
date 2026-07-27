@@ -1,7 +1,7 @@
 /* ============================================================
    image-upload.js — مدیریت پیش‌نمایش و انتخاب تصاویر (Drop Zone)
    ============================================================
-   این اسکریپت به‌صورت خودکار همه‌ی inputهای دارای کلاس
+   این ماژول به‌صورت خودکار همه‌ی inputهای دارای کلاس
    `image-input` را پیدا کرده و:
    ۱. پیش‌نمایش تصاویر انتخاب‌شده را قبل از آپلود نشان می‌دهد.
    ۲. محدودیت تعداد تصاویر (data-max) را اعمال می‌کند.
@@ -9,6 +9,9 @@
    ۴. ترتیب اولین تصویر را به‌عنوان «شاخص» مشخص می‌کند.
    ۵. از Drag & Drop پشتیبانی می‌کند.
    ۶. شمارنده‌ی تعداد تصاویر انتخاب‌شده را به‌روز می‌کند.
+
+   این ماژول خودش را در `window.JabamanModules` ثبت می‌کند تا
+   `main.js` آن را init کند.
 
    نکته: این اسکریپت فقط پیش‌نمایش است؛ فایل‌های واقعی توسط FormData
    هنگام submit فرم ارسال می‌شوند. به‌جای حذف از input.files (که
@@ -256,9 +259,21 @@
         return (bytes / (1024 * 1024)).toFixed(2) + " MB";
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
+    function init(root) {
+        root = root || document;
+        var inputs = root.querySelectorAll("input.image-input[type='file']");
+        for (var i = 0; i < inputs.length; i++) {
+            // جلوگیری از attach چندباره
+            if (inputs[i].__imageUploadAttached) continue;
+            inputs[i].__imageUploadAttached = true;
+            setupInput(inputs[i]);
+        }
     }
+
+    // ثبت در module registry (main.js اجرای init را برعهده دارد)
+    window.JabamanModules = window.JabamanModules || [];
+    window.JabamanModules.push({ name: "ImageUpload", init: init });
+
+    // API عمومی
+    window.ImageUpload = { init: init };
 })();
