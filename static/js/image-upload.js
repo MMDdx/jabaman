@@ -10,8 +10,9 @@
    ۵. از Drag & Drop پشتیبانی می‌کند.
    ۶. شمارنده‌ی تعداد تصاویر انتخاب‌شده را به‌روز می‌کند.
 
-   این ماژول خودش را در `window.JabamanModules` ثبت می‌کند تا
-   `main.js` آن را init کند.
+   این ماژول مستقلاً روی DOMContentLoaded خودش را مقداردهی می‌کند.
+   برای فعال‌سازی روی یک صفحه، کافی است template آن صفحه این فایل را
+   با <script src="/static/js/image-upload.js"></script> import کند.
 
    نکته: این اسکریپت فقط پیش‌نمایش است؛ فایل‌های واقعی توسط FormData
    هنگام submit فرم ارسال می‌شوند. به‌جای حذف از input.files (که
@@ -270,10 +271,13 @@
         }
     }
 
-    // ثبت در module registry (main.js اجرای init را برعهده دارد)
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "ImageUpload", init: init });
-
     // API عمومی
     window.ImageUpload = { init: init };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();

@@ -174,16 +174,19 @@
     }
 
     function init(root) {
-        var forms = root.querySelectorAll("form[data-reservation-form]");
+        var forms = (root || document).querySelectorAll("form[data-reservation-form]");
         for (var i = 0; i < forms.length; i++) {
             initForm(forms[i]);
         }
     }
 
-    // ثبت در module registry
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "ReservationForm", init: init });
-
     // API عمومی
     window.ReservationForm = { init: init };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();

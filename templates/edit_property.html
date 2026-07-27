@@ -67,7 +67,7 @@
                         {% endif %}
                         <form method="POST"
                               action="/property/{{ property.id }}/images/{{ img.id }}/delete"
-                              onsubmit="return confirm('این تصویر حذف شود؟');"
+                              data-confirm="این تصویر حذف شود؟"
                               style="display:inline;">
                             <button type="submit" class="btn-delete-image" title="حذف تصویر">
                                 <i class="fas fa-trash-alt"></i>
@@ -213,6 +213,7 @@
     </div>
 </footer>
 
+<script src="/static/js/confirm.js"></script>
 <script src="/static/js/main.js"></script>
 <script src="/static/js/image-upload.js"></script>
 </body>

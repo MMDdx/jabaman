@@ -108,16 +108,19 @@
     }
 
     function init(root) {
-        var galleries = root.querySelectorAll("[data-gallery]");
+        var galleries = (root || document).querySelectorAll("[data-gallery]");
         for (var i = 0; i < galleries.length; i++) {
             initGallery(galleries[i]);
         }
     }
 
-    // ثبت در module registry
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "PropertyGallery", init: init });
-
     // API عمومی
     window.PropertyGallery = { init: init };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();

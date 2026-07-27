@@ -12,7 +12,7 @@
      1) پاک‌کردن کوکی session_id در سمت کلاینت (اضافه بر Set-Cookie سرور)
      2) ریدایرکت کاربر به صفحه اصلی (/) پس از یک مکث کوتاه
 
-   نکته: این ماژول خودش را در `window.JabamanModules` ثبت می‌کند.
+   این ماژول مستقلاً روی DOMContentLoaded خودش را مقداردهی می‌کند.
    ============================================================ */
 
 (function () {
@@ -45,10 +45,13 @@
         redirectToHome();
     }
 
-    // ثبت در module registry
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "LogoutRedirect", init: init });
-
     // API عمومی
     window.LogoutRedirect = { init: init };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();

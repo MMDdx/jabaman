@@ -57,21 +57,21 @@
                     <td class="actions-cell">
                         {% if title == 'کاربران' %}
                             <a href="/admin/users/{{ row.id }}/edit" class="action-btn action-edit"><i class="fas fa-edit"></i> ویرایش</a>
-                            <a href="/admin/users/{{ row.id }}/delete" class="action-btn action-delete" onclick="return confirm('آیا از حذف این کاربر مطمئن هستید؟ همه‌ی اقامتگاه‌ها و نظرات او هم حذف می‌شوند.')"><i class="fas fa-trash"></i> حذف</a>
+                            <a href="/admin/users/{{ row.id }}/delete" class="action-btn action-delete" data-confirm="آیا از حذف این کاربر مطمئن هستید؟ همه‌ی اقامتگاه‌ها و نظرات او هم حذف می‌شوند."><i class="fas fa-trash"></i> حذف</a>
                         {% elif title == 'اقامتگاه‌ها' %}
                             <a href="/property/{{ row.id }}" class="action-btn action-view"><i class="fas fa-eye"></i> مشاهده</a>
                             <a href="/admin/properties/{{ row.id }}/edit" class="action-btn action-edit"><i class="fas fa-edit"></i> ویرایش</a>
-                            <a href="/admin/properties/{{ row.id }}/delete" class="action-btn action-delete" onclick="return confirm('آیا از حذف این اقامتگاه مطمئن هستید؟ نظرات مرتبط هم حذف می‌شوند.')"><i class="fas fa-trash"></i> حذف</a>
+                            <a href="/admin/properties/{{ row.id }}/delete" class="action-btn action-delete" data-confirm="آیا از حذف این اقامتگاه مطمئن هستید؟ نظرات مرتبط هم حذف می‌شوند."><i class="fas fa-trash"></i> حذف</a>
                         {% elif title == 'پیام‌ها' %}
                             <a href="/message/{{ row.id }}" class="action-btn action-view"><i class="fas fa-eye"></i> مشاهده</a>
-                            <a href="/admin/messages/{{ row.id }}/delete" class="action-btn action-delete" onclick="return confirm('آیا از حذف این پیام مطمئن هستید؟')"><i class="fas fa-trash"></i> حذف</a>
+                            <a href="/admin/messages/{{ row.id }}/delete" class="action-btn action-delete" data-confirm="آیا از حذف این پیام مطمئن هستید؟"><i class="fas fa-trash"></i> حذف</a>
                         {% elif title == 'نظرات' %}
                             <a href="/property/{{ row.property_id }}" class="action-btn action-view"><i class="fas fa-eye"></i> مشاهده اقامتگاه</a>
-                            <a href="/admin/comments/{{ row.id }}/delete" class="action-btn action-delete" onclick="return confirm('آیا از حذف این نظر مطمئن هستید؟')"><i class="fas fa-trash"></i> حذف</a>
+                            <a href="/admin/comments/{{ row.id }}/delete" class="action-btn action-delete" data-confirm="آیا از حذف این نظر مطمئن هستید؟"><i class="fas fa-trash"></i> حذف</a>
                         {% elif title == 'رزروها' %}
                             <a href="/property/{{ row.property_id }}" class="action-btn action-view"><i class="fas fa-eye"></i> مشاهده اقامتگاه</a>
                             {% if row.status == 'confirmed' %}
-                            <a href="/admin/reservations/{{ row.id }}/cancel" class="action-btn action-delete" onclick="return confirm('آیا از لغو این رزرو مطمئن هستید؟ با لغو، تاریخ‌های این رزرو برای دیگران آزاد می‌شود.')"><i class="fas fa-ban"></i> لغو رزرو</a>
+                            <a href="/admin/reservations/{{ row.id }}/cancel" class="action-btn action-delete" data-confirm="آیا از لغو این رزرو مطمئن هستید؟ با لغو، تاریخ‌های این رزرو برای دیگران آزاد می‌شود."><i class="fas fa-ban"></i> لغو رزرو</a>
                             {% else %}
                             <span style="color:var(--text-muted);font-size:0.85rem;">—</span>
                             {% endif %}
@@ -99,6 +99,7 @@
     </div>
 </footer>
 
+<script src="/static/js/confirm.js"></script>
 <script src="/static/js/main.js"></script>
 </body>
 </html>

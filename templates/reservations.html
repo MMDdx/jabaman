@@ -116,7 +116,7 @@
                 {% if r.is_confirmed %}
                 <a href="/reservation/{{ r.id }}/cancel"
                    class="btn-cancel-reservation"
-                   onclick="return confirm('آیا از لغو این رزرو مطمئن هستید؟ با لغو رزرو، اقامتگاه برای دیگران آزاد می‌شود.')">
+                   data-confirm="آیا از لغو این رزرو مطمئن هستید؟ با لغو رزرو، اقامتگاه برای دیگران آزاد می‌شود.">
                     <i class="fas fa-times"></i> لغو رزرو
                 </a>
                 {% endif %}
@@ -145,6 +145,7 @@
     </div>
 </footer>
 
+<script src="/static/js/confirm.js"></script>
 <script src="/static/js/main.js"></script>
 </body>
 </html>

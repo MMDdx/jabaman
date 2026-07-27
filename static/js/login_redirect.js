@@ -7,7 +7,7 @@
 
    کار آن: ریدایرکت کاربر را به /login پس از ۲ ثانیه انجام می‌دهد.
 
-   نکته: این ماژول خودش را در `window.JabamanModules` ثبت می‌کند.
+   این ماژول مستقلاً روی DOMContentLoaded خودش را مقداردهی می‌کند.
    ============================================================ */
 
 (function () {
@@ -26,10 +26,13 @@
         }, 2000);
     }
 
-    // ثبت در module registry
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "LoginRedirect", init: init });
-
     // API عمومی
     window.LoginRedirect = { init: init };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();

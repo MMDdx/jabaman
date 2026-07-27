@@ -4,9 +4,10 @@
    این ماژول به‌صورت خودکار فرم‌هایی که ویژگی `data-ajax-form` دارند
    را پیدا کرده و ارسال آن‌ها را با fetch مدیریت می‌کند.
 
-   این ماژول خودش را در `window.JabamanModules` ثبت می‌کند تا
-   `main.js` آن را init کند. به همین دلیل در صفحاتی که این فایل
-   بارگذاری می‌شود، باید main.js هم بارگذاری شود.
+   این ماژول مستقلاً روی DOMContentLoaded خودش را مقداردهی می‌کند.
+   برای فعال‌سازی روی یک صفحه، کافی است template آن صفحه این فایل را
+   با <script src="/static/js/auth.js"></script> import کند. هیچ
+   registry مرکزی لازم نیست.
 
    نحوه استفاده در HTML:
    ------------------------------------------------------------
@@ -229,15 +230,18 @@
         }
     }
 
-    // ثبت در module registry (main.js اجرای init را برعهده دارد)
-    window.JabamanModules = window.JabamanModules || [];
-    window.JabamanModules.push({ name: "AuthForm", init: init });
-
-    // API عمومی (در صورت نیاز به استفاده دستی)
+    // API عمومی (در صورت نیاز به استفاده دستی، مثلاً بعد از تزریق DOM جدید)
     window.AuthForm = {
         init: init,
         showMessage: showMessage,
         hideMessage: hideMessage,
         validateForm: validateForm
     };
+
+    // مقداردهی خودکار روی DOMContentLoaded
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { init(document); });
+    } else {
+        init(document);
+    }
 })();
