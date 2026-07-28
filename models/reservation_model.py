@@ -92,14 +92,6 @@ def calculate_reservation_price(price_per_night, max_guests, check_in, check_out
 def is_property_available(property_id, check_in, check_out, exclude_reservation_id=None):
     """بررسی اینکه آیا اقامتگاه در بازه‌ی مشخص شده قابل رزرو است یا خیر.
 
-    منطق:
-    - یک اقامتگاه می‌تواند در بازه‌های مختلف به چند کاربر رزرو شود. فقط بازه‌های
-      هم‌پوشانی نباید قابل رزرو باشند. بنابراین فیلد properties.is_reserved فقط
-      یک علامت سریع برای داشتن حداقل یک رزرو فعال است و تصمیم نهایی بر اساس
-      هم‌پوشانی تاریخ‌ها گرفته می‌شود.
-    - در جدول reservations، رزروهایی با status='confirmed' را بررسی می‌کنیم که
-      بازه‌ی آن‌ها با بازه‌ی درخواستی هم‌پوشانی داشته باشد.
-
     هم‌پوشانی: A.start < B.end AND B.start < A.end
     """
     d_in = _parse_date(check_in)
@@ -137,10 +129,6 @@ def is_property_available(property_id, check_in, check_out, exclude_reservation_
 
 def _generate_reservation_code():
     """تولید یک شناسه‌ی رزرو تصادفی یکتا به‌فرمت JAB-XXXXXX.
-
-    XXXXXX شامل ۶ کاراکتر از حروف بزرگ و اعداد است (A-Z0-9).
-    تلاش می‌کند تا ۱۰ بار کد یکتا تولید کند. اگر همگی تکراری بودند،
-    یک UUID کوتاه به‌عنوان fallback برمی‌گرداند.
     """
     alphabet = string.ascii_uppercase + string.digits
     # حذف کاراکترهای به‌راحت اشتباه‌گرفته‌شده (O, 0, I, 1)

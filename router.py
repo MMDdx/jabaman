@@ -176,9 +176,8 @@ def process_get(path, user_id=None):
     return None
 
 
-# ========================
+
 #         POST
-# ========================
 def process_post(path, body, user_id=None, headers=None):
     """Dispatch مسیرهای POST به کنترلرهای مناسب.
 

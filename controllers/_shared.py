@@ -1,17 +1,5 @@
 # controllers/_shared.py
 """توابع و کلاس‌های مشترک بین همه‌ی کنترلرها.
-
-این ماژول هیچ‌گونه dispatching انجام نمی‌دهد — فقط ابزارهای پایه‌ای فراهم می‌کند:
-
-- Response:          کلاس ساخت پاسخ HTTP (html / json / redirect / forbidden / login_required)
-- parse_form_body:   تجزیه‌ی بدنه‌ی POST (URL-encoded و multipart)
-- wants_json:        تشخیص درخواست AJAX (fetch/XHR)
-- match_route:       تطبیق مسیر داینامیک با پارامترهای <int:name>
-- require_login:     بررسی ورود کاربر
-- require_admin:     بررسی ادمین بودن کاربر
-- image helpers:     allowed_image_filename / save_uploaded_image / delete_image_file
-- EMAIL_REGEX:       الگوی اعتبارسنجی ایمیل
-- MAX_IMAGE_SIZE:    حداکثر اندازه‌ی فایل آپلودی
 """
 import json
 import os
@@ -52,8 +40,6 @@ class Response:
     @staticmethod
     def json(status, payload, headers=None):
         """ساخت پاسخ JSON.
-
-        payload یک dict است که به JSON تبدیل می‌شود.
         کاربرد اصلی: پاسخ به درخواست‌های fetch از فرم‌های login/signup.
         """
         h = list(headers or [])
@@ -203,9 +189,7 @@ def wants_json(headers):
     return "application/json" in accept or xrw == "xmlhttprequest"
 
 
-# ========================
 #  مسیریابی و کنترل دسترسی
-# ========================
 def match_route(path, pattern):
     """تطبیق مسیر داینامیک با پارامترهای <int:name>."""
     path_parts = path.strip('/').split('/')
@@ -245,9 +229,8 @@ def require_admin(user_id):
     return models.is_admin(user_id)
 
 
-# ========================
+
 #  تنظیمات آپلود تصاویر
-# ========================
 def allowed_image_filename(filename):
     """بررسی اینکه فایل با پسوند مجاز است."""
     if not filename:

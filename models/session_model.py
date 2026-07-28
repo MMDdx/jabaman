@@ -1,6 +1,4 @@
-# models/session_model.py
-"""توابع دامنه‌ی نشست‌ها (Sessions).
-
+"""
 شامل:
 - SESSION_TTL_HOURS (ثابت)
 - secrets_safe_uuid (helper داخلی)

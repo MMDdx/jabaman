@@ -191,7 +191,6 @@ def generate_property_detail(prop, comments, user_id=None):
 # ========================
 
 def generate_contact_page(user_id=None):
-    """صفحه‌ی تماس با ما — اکنون قالب‌محور است تا navbar یکپارچه باشد."""
     return render_template("contact.html", _base_context(user_id))
 
 
@@ -226,11 +225,6 @@ def generate_login_redirect_page():
 
 def generate_cart_page(cart_items, user_id=None):
     """ساخت صفحه‌ی سبد خرید با نمایش تاریخ‌ها، تعداد مهمان و قیمت محاسبه‌شده.
-
-    نکته: در نسخه‌ی جدید، اقامتگاه بر اساس بازه‌ی تاریخی رزرو می‌شود، نه کل
-    اقامتگاه. بنابراین در سبد خرید، آن آیتم‌هایی که با رزروهای تاییدشده‌ی
-    سایر کاربران هم‌پوشانی دارند با هشدار «تداخل تاریخ» نمایش داده می‌شوند
-    تا کاربر بداند قبل از پرداخت باید تاریخ را تغییر دهد.
     """
     items = []
     grand_total = 0
@@ -314,9 +308,6 @@ def generate_checkout_success_page(reservation_ids, errors, user_id=None):
 
 def generate_reservations_page(reservations, user_id=None):
     """صفحه‌ی «رزروهای من» — لیست رزروهای کاربر با امکان لغو.
-
-    هر رزرو یک reservation_code تصادفی یکتا (مانند JAB-7XK2P9) دارد که
-    به‌جای شماره‌ی ردیف متوالی به کاربر نشان داده می‌شود.
     """
     items = []
     for r in reservations:

@@ -13,10 +13,6 @@ from .reservation_model import calculate_reservation_price, is_property_availabl
 
 def get_cart_items(user_id):
     """گرفتن آیتم‌های سبد خرید کاربر به‌همراه اطلاعات اقامتگاه و تاریخ/مهمان.
-
-    برای هر آیتم، تعداد شب‌ها و قیمت کل محاسبه می‌شود.
-    همچنین برای هر آیتم، هم‌پوشانی با رزروهای تاییدشده‌ی سایر کاربران بررسی
-    می‌شود تا در سبد خرید، آیتم‌هایی که تاریخ تداخل دارند به‌صورت ویژه نمایش داده شوند.
     """
     with get_db() as conn:
         rows = conn.execute(

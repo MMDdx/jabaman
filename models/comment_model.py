@@ -1,9 +1,5 @@
 # models/comment_model.py
 """توابع دامنه‌ی نظرات اقامتگاه‌ها.
-
-شامل:
-- get_comments_for_property / get_all_comments / get_comment
-- add_comment / delete_comment
 """
 from ._shared import get_db, _dict
 
