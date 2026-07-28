@@ -60,20 +60,14 @@ def count_property_images(property_id):
 
 
 def add_property_image(property_id, image_path, caption=None, sort_order=None):
-    """افزودن یک تصویر به اقامتگاه.
 
-    اگر تعداد تصاویر فعلی >= MAX_PROPERTY_IMAGES باشد، False برمی‌گرداند
-    و چیزی اضافه نمی‌کند. در غیر این صورت True.
-
-    اگر sort_order پاس نشود، مقدار بعدی به‌صورت خودکار محاسبه می‌شود.
-    """
     if not property_id or not image_path:
         return False
     current = count_property_images(property_id)
     if current >= MAX_PROPERTY_IMAGES:
         return False
     if sort_order is None:
-        sort_order = current  # 0, 1, 2, ...
+        sort_order = current
     with get_db() as conn:
         conn.execute(
             "INSERT INTO property_images (property_id, image_path, caption, sort_order) "
@@ -98,13 +92,6 @@ def get_image_by_id(image_id):
 
 
 def delete_property_image(image_id):
-    """حذف یک تصویر از دیتابیس.
-
-    نکته: حذف فایل فیزیکی روی دیسک باید توسط caller انجام شود چون models
-    نباید مستقیماً با فایل سیستم کار کند.
-
-    خروجی: مسیر فایل تصویر حذف‌شده (برای حذف فیزیکی توسط caller)، یا None.
-    """
     if not image_id:
         return None
     with get_db() as conn:

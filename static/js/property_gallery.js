@@ -44,7 +44,14 @@
 
     function initGallery(root) {
         // خواندن لیست URLها از data attribute
+        // نکته: تگ data-gallery-images ممکن است داخل data-gallery باشد
+        // (قرارگیری استاندارد) یا به‌عنوان sibling بیرون از آن (در قالب فعلی).
+        // برای پشتیبانی از هر دو حالت، اول داخل root جستجو می‌کنیم و اگر
+        // پیدا نشد، در کل document جستجو می‌کنیم.
         var imagesSource = root.querySelector("[data-gallery-images]");
+        if (!imagesSource) {
+            imagesSource = document.querySelector("[data-gallery-images]");
+        }
         var images = [];
         if (imagesSource) {
             try {

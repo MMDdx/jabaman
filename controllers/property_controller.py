@@ -1,11 +1,8 @@
 # controllers/property_controller.py
-"""کنترلر اقامتگاه — افزودن اقامتگاه توسط میزبان + حذف تصویر.
-
+"""
 مسیرهای تحت پوشش:
-- POST /add-property                                   → افزودن اقامتگاه جدید
-- POST /property/<int:property_id>/images/<int:image_id>/delete   → حذف تصویر
-
-نکته: ویرایش و حذف اقامتگاه در admin_controller.py است چون فقط ادمین دسترسی دارد.
+- POST /add-property
+- POST /property/<int:property_id>/images/<int:image_id>/delete
 """
 import models
 from views import generate_error_page
@@ -23,15 +20,7 @@ from ._shared import (
 
 
 def handle_add_property(params, user_id, wants_json=False):
-    """افزودن اقامتگاه جدید — host_id از نشست گرفته می‌شود.
 
-    فیلد اختیاری extra_guest_charge نیز از فرم خوانده می‌شود. اگر
-    وارد نشده بود، از DEFAULT_EXTRA_GUEST_CHARGE_PER_PERSON_PER_NIGHT
-    استفاده می‌شود.
-
-    این هندلر همچنین تصاویر آپلودی را (تا MAX_PROPERTY_IMAGES عدد) در فیلد
-    "images" دریافت و ذخیره می‌کند.
-    """
     if not require_login(user_id):
         return Response.login_required()
 

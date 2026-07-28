@@ -365,6 +365,14 @@ def _render_for(header, body_nodes, context):
     header می‌تواند یکی از این دو حالت باشد:
       - "item in items"
       - "i, item in enumerate(items)"
+
+    در هر iteration، یک dict با نام `loop` در context قرار می‌گیرد که
+    شامل این کلیدهاست (مشابه Jinja2):
+      - loop.index      → ۱-based (۱, ۲, ۳, ...)
+      - loop.index0     → ۰-based (۰, ۱, ۲, ...)
+      - loop.first      → True فقط در اولین iteration
+      - loop.last       → True فقط در آخرین iteration
+      - loop.length     → تعداد کل آیتم‌ها
     """
     # حالت enumerate
     m = re.match(
@@ -376,11 +384,20 @@ def _render_for(header, body_nodes, context):
         item_var = m.group(2)
         iterable_name = m.group(3)
         items = context.get(iterable_name) or []
+        items = list(items)
+        total = len(items)
         result = []
         for idx, item in enumerate(items):
             loop_ctx = context.copy()
             loop_ctx[idx_var] = idx
             loop_ctx[item_var] = item
+            loop_ctx['loop'] = {
+                'index': idx + 1,
+                'index0': idx,
+                'first': idx == 0,
+                'last': idx == total - 1,
+                'length': total,
+            }
             result.append(_render_nodes(body_nodes, loop_ctx))
         return ''.join(result)
 
@@ -390,10 +407,19 @@ def _render_for(header, body_nodes, context):
         item_var = m.group(1)
         iterable_name = m.group(2)
         items = context.get(iterable_name) or []
+        items = list(items)
+        total = len(items)
         result = []
-        for item in items:
+        for idx, item in enumerate(items):
             loop_ctx = context.copy()
             loop_ctx[item_var] = item
+            loop_ctx['loop'] = {
+                'index': idx + 1,
+                'index0': idx,
+                'first': idx == 0,
+                'last': idx == total - 1,
+                'length': total,
+            }
             result.append(_render_nodes(body_nodes, loop_ctx))
         return ''.join(result)
 

@@ -1,13 +1,4 @@
-# server.py
-"""لایه‌ی HTTP سرور — هندلر BaseHTTPRequestHandler.
 
-تغییرات نسبت به نسخه‌ی قبل:
-- رفع باگ ValueError در _send_error (router.error_* حالا ۴تایی برمی‌گردانند).
-- هدرهای درخواست (Accept, X-Requested-With) به process_post پاس داده می‌شوند
-  تا router بتواند درخواست‌های AJAX (fetch) را تشخیص دهد و JSON برگرداند.
-- استفاده از `with open(...)` برای جلوگیری از نشت file handle.
-- استفاده از http.server.ThreadingHTTPServer داخلی پایتون (نیازی به کلاس دستی نیست).
-"""
 import http.server
 import os
 from http.cookies import SimpleCookie
@@ -18,10 +9,6 @@ import router
 HOST = "localhost"
 PORT = 8000
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-
-# نکته: صفحات contact / login / signup / add-property اکنون از طریق router
-# و template engine سرو می‌شوند تا navbar یکپارچه و وابسته به وضعیت ورود باشد.
-# بنابراین دیگر نیازی به GET_STATIC_ROUTES نیست.
 
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
@@ -37,7 +24,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self._send(dynamic_response)
             return
 
-        # ۲. فایل‌های استاتیک عمومی (CSS, JS, images, fonts)
         if path.startswith("/static/"):
             file_path = os.path.join(STATIC_DIR, path[len("/static/"):])
             if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -46,7 +32,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     body = f.read()
                 # CSS/JS را no-cache می‌کنیم تا تغییرات سریع دیده شوند.
                 # اما فونت‌ها و تصاویر را cache می‌کنیم (با مدت زمان طولانی)
-                # چون تغییر نمی‌کنند و کش شدنشان سرعت لود را بالا می‌برد.
                 ext = os.path.splitext(file_path)[1].lower()
                 if ext in (".woff", ".woff2", ".png", ".jpg", ".jpeg",
                           ".gif", ".svg", ".ico", ".webp"):
@@ -60,7 +45,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self._send_error(404)
             return
 
-        # ۳. هیچ‌کدام → ۴۰۴
         self._send_error(404)
 
     def do_POST(self):
@@ -76,9 +60,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     # ----------------- متدهای کمکی -----------------
 
     def _send(self, response):
-        """ارسال پاسخ به کلاینت.
-
-        response می‌تواند یکی از این فرمت‌ها باشد:
+        """
         - (status, content_type, body)
         - (status, content_type, body, headers_list)
         """
@@ -107,12 +89,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             self.wfile.write(body)
         except BrokenPipeError:
-            pass  # کلاینت قطع شده
+            pass  # disconnect
 
     def _send_error(self, code):
         """ارسال صفحه خطای سفارشی.
-
-        نکته: router.error_* یک ۴تایی (status, content_type, body, headers) برمی‌گردانند.
         """
         if code == 404:
             resp = router.error_404()
@@ -173,14 +153,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """لاگ سفارشی برای خوانایی بهتر."""
-        # برای خاموش‌کردن لاگ، خط زیر را کامنت کنید
         super().log_message(format, *args)
 
 
 def start():
     """اجرای سرور با ThreadingHTTPServer داخلی پایتون."""
     server_address = (HOST, PORT)
-    # ThreadingHTTPServer از پایتون ۳.۷ به بعد در http.server وجود دارد
+
     httpd = http.server.ThreadingHTTPServer(server_address, RequestHandler)
     httpd.daemon_threads = True
     print(f"سرور در http://{HOST}:{PORT} اجرا شد.")
