@@ -37,10 +37,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """رمز عبور را با هش ذخیره‌شده مقایسه می‌کند.
 
-    از secrets.compare_digest برای جلوگیری از timing attack استفاده می‌شود.
-    """
     if not password or not stored_hash:
         return False
 

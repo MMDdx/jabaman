@@ -119,7 +119,6 @@ def handle_login(params, wants_json=False):
 
     user = models.get_user_by_email(email)
     if not user or not verify_password(password, user["password"]):
-        # نکته امنیتی: پیام کلی می‌دهیم تا attacker نفهمد ایمیل وجود دارد یا نه.
         return fail("ایمیل یا رمز عبور نادرست است.", status=401)
 
     session_id = models.create_session(user["id"])
@@ -130,12 +129,12 @@ def handle_login(params, wants_json=False):
     cookie["session_id"]["path"] = "/"
     cookie["session_id"]["httponly"] = True
     cookie["session_id"]["samesite"] = "Lax"
-    cookie["session_id"]["max-age"] = 3600 * 24  # یک روز
+    cookie["session_id"]["max-age"] = 3600 * 24
 
     headers = [("Set-Cookie", cookie["session_id"].OutputString())]
 
     if wants_json:
-        # برای fetch: JSON با موفقیت + redirect
+
         return Response.json(200, {
             "success": True,
             "redirect": "/"
@@ -144,18 +143,6 @@ def handle_login(params, wants_json=False):
 
 
 def handle_logout(user_id):
-    """خروج — پاک‌کردن کوکی session_id.
-
-    هم GET و هم POST به این تابع سپرده می‌شوند.
-    - سرور کوکی session_id را با max-age=0 پاک می‌کند.
-    - در سمت کلاینت، فایل logout.js نیز کوکی را پاک می‌کند و سپس ریدایرکت می‌کند.
-    - به‌جای inline script، از templates/logout.html + static/js/logout.js استفاده می‌شود.
-    """
-    # (اختیاری) پاک‌کردن session از DB — فعلاً فقط کوکی پاک می‌شود
-    # if user_id:
-    #     models.delete_sessions_for_user(user_id)
-
-    # هدر Set-Cookie برای پاک‌کردن کوکی
     cookie = SimpleCookie()
     cookie["session_id"] = ""
     cookie["session_id"]["path"] = "/"
@@ -164,5 +151,5 @@ def handle_logout(user_id):
     cookie["session_id"]["samesite"] = "Lax"
     headers = [("Set-Cookie", cookie["session_id"].OutputString())]
 
-    # قالب خروج — با JS خارجی
+
     return Response.html(200, generate_logout_page(), headers)

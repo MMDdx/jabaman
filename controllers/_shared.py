@@ -79,25 +79,18 @@ class Response:
 #  تجزیه‌ی بدنه‌ی POST
 # ========================
 def parse_form_body(body, content_type=None):
-    """تجزیه‌ی بدنه‌ی POST با پشتیبانی از هر دو فرمت:
-
+    """
     1. application/x-www-form-urlencoded  (پیش‌فرض HTML forms)
     2. multipart/form-data  (FormData در fetch، شامل فایل آپلودی)
-
-    خروجی: dict شبیه parse_qs با مقادیر لیست.
-    برای فایل‌های آپلودی، مقدار یک dict است:
-        {"filename": "x.jpg", "data": b"..."}
     """
     if not body:
         return {}
 
     # اگر Content-Type مشخص می‌کند که multipart است، مستقیم به parse_multipart بفرست
-    # نکته: در موارد multipart با فایل باینری، decode UTF-8 ناموفق است،
-    # پس باید قبل از تلاش برای decode بررسی کنیم.
+    #  در موارد multipart با فایل باینری، decode UTF-8 ناموفق است،
     if content_type and "multipart/form-data" in content_type.lower():
         return _parse_multipart(body, content_type)
 
-    # اگر body از نوع bytes است، آن را به متن تبدیل کن
     if isinstance(body, bytes):
         try:
             text = body.decode("utf-8")
